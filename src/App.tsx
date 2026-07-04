@@ -18,10 +18,24 @@ const riskLevels: Array<RiskLevel | 'all'> = ['all', 'critical', 'high', 'medium
 const attackFamilies: Array<AttackFamily | 'all'> = ['all', 'pgd', 'fgsm', 'square', 'adaptive'];
 
 const familyNotes: Record<AttackFamily, string> = {
-  pgd: 'White-box targeted attack',
-  fgsm: 'Fast white-box baseline',
-  square: 'Query-based probing',
-  adaptive: 'Defense-aware scenario',
+  pgd: '모델 내부 정보를 알고 반복적으로 이미지를 조금씩 바꾸는 강한 공격입니다.',
+  fgsm: '한 번의 계산으로 이미지를 바꾸는 빠른 기준 공격입니다.',
+  square: '모델 내부를 모르는 상태에서 여러 번 물어보며 성공 여부를 찾는 공격입니다.',
+  adaptive: '방어 로직을 알고 있다고 가정하고 우회를 시도하는 공격 시나리오입니다.',
+};
+
+const familyLabels: Record<AttackFamily, string> = {
+  pgd: 'PGD',
+  fgsm: 'FGSM',
+  square: 'Square',
+  adaptive: 'Adaptive',
+};
+
+const riskDescriptions: Record<RiskLevel, string> = {
+  critical: '공격 성공 가능성과 위험 신호가 모두 매우 높은 세션입니다.',
+  high: '운영자가 우선 확인해야 하는 고위험 세션입니다.',
+  medium: '추가 관찰이 필요한 중간 위험 세션입니다.',
+  low: '현재 기준에서는 낮은 위험으로 분류된 세션입니다.',
 };
 
 function formatNumber(value: number | null | undefined, digits = 0) {
@@ -43,6 +57,15 @@ function formatPercent(value: number | null | undefined) {
 
 function splitRules(ruleHits: string) {
   return ruleHits.split(';').filter(Boolean);
+}
+
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="tooltip" tabIndex={0} aria-label={text}>
+      ?
+      <span role="tooltip">{text}</span>
+    </span>
+  );
 }
 
 function StatCard({ label, value, tone }: { label: string; value: string; tone?: string }) {
@@ -106,7 +129,10 @@ function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
           <article className="family-card" key={row.attack_family}>
             <div className="family-title">
               <div>
-                <strong>{row.attack_family.toUpperCase()}</strong>
+                <strong>
+                  {familyLabels[row.attack_family]}
+                  <InfoTooltip text={familyNotes[row.attack_family]} />
+                </strong>
                 <span>{familyNotes[row.attack_family]}</span>
               </div>
               <b>{formatPercent(row.attack_accept_rate)}</b>
@@ -124,10 +150,10 @@ function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
             </div>
             <RiskDistribution row={row} />
             <div className="risk-legend compact">
-              <span>Critical {row.critical}</span>
-              <span>High {row.high}</span>
-              <span>Medium {row.medium}</span>
-              <span>Low {row.low}</span>
+              <span title={riskDescriptions.critical}>Critical {row.critical}</span>
+              <span title={riskDescriptions.high}>High {row.high}</span>
+              <span title={riskDescriptions.medium}>Medium {row.medium}</span>
+              <span title={riskDescriptions.low}>Low {row.low}</span>
             </div>
           </article>
         ))}
@@ -170,7 +196,9 @@ function RiskSessionsTable({
             <th>account_id</th>
             <th>source_identity</th>
             <th>target_identity</th>
-            <th>attack_family</th>
+            <th>
+              attack_family <InfoTooltip text="PGD, FGSM, Square, Adaptive 공격 유형입니다. 각 유형 카드를 hover하면 뜻을 볼 수 있습니다." />
+            </th>
             <th>similarity_after_attack</th>
             <th>threshold_margin</th>
             <th>accepted_after_attack</th>
@@ -190,7 +218,7 @@ function RiskSessionsTable({
               <td>{session.account_id}</td>
               <td>{session.source_identity}</td>
               <td>{session.target_identity}</td>
-              <td>{session.attack_family}</td>
+              <td title={familyNotes[session.attack_family]}>{familyLabels[session.attack_family]}</td>
               <td>{formatNumber(session.similarity_after_attack, 4)}</td>
               <td>{formatNumber(session.threshold_margin, 4)}</td>
               <td>{session.accepted_after_attack ? 'accepted' : 'rejected'}</td>
@@ -242,7 +270,10 @@ function SessionDetail({
       <dl className="detail-grid">
         <div>
           <dt>공격 유형</dt>
-          <dd>{session.attack_family.toUpperCase()}</dd>
+          <dd>
+            {familyLabels[session.attack_family]}
+            <InfoTooltip text={familyNotes[session.attack_family]} />
+          </dd>
         </div>
         <div>
           <dt>Epsilon</dt>
@@ -334,7 +365,9 @@ function RuleStatistics({
                   <td>{row.rule_id}</td>
                   <td>{rule?.name ?? '-'}</td>
                   <td>
-                    <span className={`pill risk-${rule?.severity ?? 'medium'}`}>{rule?.severity ?? '-'}</span>
+                    <span className={`pill risk-${rule?.severity ?? 'medium'}`} title={rule ? riskDescriptions[rule.severity] : undefined}>
+                      {rule?.severity ?? '-'}
+                    </span>
                   </td>
                   <td>{formatNumber(row.sessions)}</td>
                   <td>{formatPercent(row.attack_accept_rate)}</td>
@@ -391,8 +424,9 @@ function Dashboard({ data }: { data: DashboardData }) {
     <main>
       <header className="app-header">
         <div>
-          <p>Financial FaceAuth</p>
+          <p>Financial FaceAuth Operations</p>
           <h1>Attack Forensics Dashboard</h1>
+          <span className="header-description">공격 세션의 성공 여부, 위험도, 탐지 룰 근거를 한 화면에서 점검합니다.</span>
         </div>
         <div className="header-meta">
           <span>2,000 sessions</span>
@@ -416,7 +450,12 @@ function Dashboard({ data }: { data: DashboardData }) {
           <div>
             <span>risk_level</span>
             {riskLevels.map((value) => (
-              <FilterButton key={value} value={value} active={riskFilter === value} onClick={setRiskFilter} />
+              <FilterButton
+                key={value}
+                value={value}
+                active={riskFilter === value}
+                onClick={setRiskFilter}
+              />
             ))}
           </div>
           <div>
