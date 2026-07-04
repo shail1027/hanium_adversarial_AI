@@ -77,9 +77,34 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
+function ConsoleSidebar({ overview }: { overview: DashboardOverview }) {
+  return (
+    <aside className="console-sidebar">
+      <div className="brand-block">
+        <span>FA</span>
+        <div>
+          <strong>FaceAuth</strong>
+          <small>Forensics</small>
+        </div>
+      </div>
+      <nav className="side-nav" aria-label="Dashboard sections">
+        <a href="#overview" className="active">Overview</a>
+        <a href="#families">Attack Types</a>
+        <a href="#sessions">Risk Sessions</a>
+        <a href="#rules">Rules</a>
+      </nav>
+      <div className="sidebar-status">
+        <span>Dataset</span>
+        <strong>{formatNumber(overview.total_sessions)} sessions</strong>
+        <small>2026-06-28 KST</small>
+      </div>
+    </aside>
+  );
+}
+
 function OverviewCards({ overview }: { overview: DashboardOverview }) {
   return (
-    <section className="overview-grid" aria-label="Overview">
+    <section className="overview-grid" id="overview" aria-label="Overview">
       <StatCard label="전체 공격 세션 수" value={formatNumber(overview.total_sessions)} />
       <StatCard label="공격 성공 수" value={formatNumber(overview.accepted_after_attack)} tone="success" />
       <StatCard label="공격 성공률" value={formatPercent(overview.attack_accept_rate)} tone="success" />
@@ -117,7 +142,7 @@ function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
   const maxSessions = Math.max(...rows.map((row) => row.sessions));
 
   return (
-    <section className="panel">
+    <section className="panel" id="families">
       <div className="section-heading">
         <div>
           <p>Attack Families</p>
@@ -126,7 +151,7 @@ function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
       </div>
       <div className="family-grid">
         {rows.map((row) => (
-          <article className="family-card" key={row.attack_family}>
+          <article className={`family-card family-${row.attack_family}`} key={row.attack_family}>
             <div className="family-title">
               <div>
                 <strong>
@@ -338,7 +363,7 @@ function RuleStatistics({
   rulesById: Map<string, RuleDefinition>;
 }) {
   return (
-    <section className="panel">
+    <section className="panel" id="rules">
       <div className="section-heading">
         <div>
           <p>Detection Rules</p>
@@ -421,65 +446,68 @@ function Dashboard({ data }: { data: DashboardData }) {
   const selectedSession = attackSessionsById.get(selectedId);
 
   return (
-    <main>
-      <header className="app-header">
-        <div>
-          <p>Financial FaceAuth Operations</p>
-          <h1>Attack Forensics Dashboard</h1>
-          <span className="header-description">공격 세션의 성공 여부, 위험도, 탐지 룰 근거를 한 화면에서 점검합니다.</span>
-        </div>
-        <div className="header-meta">
-          <span>2,000 sessions</span>
-          <span>2026-06-28 KST</span>
-        </div>
-      </header>
-
-      <OverviewCards overview={data.overview} />
-      <AttackFamilyComparison rows={data.familyRows} />
-
-      <section className="panel">
-        <div className="section-heading">
+    <div className="console-shell">
+      <ConsoleSidebar overview={data.overview} />
+      <main className="console-main">
+        <header className="app-header">
           <div>
-            <p>Risk Sessions</p>
-            <h2>위험 세션 테이블</h2>
+            <p>Financial FaceAuth Operations</p>
+            <h1>Attack Forensics</h1>
+            <span className="header-description">공격 세션의 성공 여부, 위험도, 탐지 룰 근거를 운영 관점에서 점검합니다.</span>
           </div>
-          <span>{formatNumber(filteredSessions.length)} rows</span>
-        </div>
+          <div className="header-meta">
+            <span className="status-dot">Live dataset</span>
+            <span>Updated 2026-06-28</span>
+          </div>
+        </header>
 
-        <div className="filters">
-          <div>
-            <span>risk_level</span>
-            {riskLevels.map((value) => (
-              <FilterButton
-                key={value}
-                value={value}
-                active={riskFilter === value}
-                onClick={setRiskFilter}
-              />
-            ))}
-          </div>
-          <div>
-            <span>attack_family</span>
-            {attackFamilies.map((value) => (
-              <FilterButton key={value} value={value} active={familyFilter === value} onClick={setFamilyFilter} />
-            ))}
-          </div>
-          <div>
-            <span>accepted_after_attack</span>
-            {(['all', 'accepted', 'rejected'] as AcceptedFilter[]).map((value) => (
-              <FilterButton key={value} value={value} active={acceptedFilter === value} onClick={setAcceptedFilter} />
-            ))}
-          </div>
-        </div>
+        <OverviewCards overview={data.overview} />
+        <AttackFamilyComparison rows={data.familyRows} />
 
-        <div className="session-layout">
-          <RiskSessionsTable sessions={filteredSessions} selectedId={selectedId} onSelect={setSelectedId} />
-          <SessionDetail session={selectedSession} rulesById={rulesById} />
-        </div>
-      </section>
+        <section className="panel" id="sessions">
+          <div className="section-heading">
+            <div>
+              <p>Risk Sessions</p>
+              <h2>위험 세션 테이블</h2>
+            </div>
+            <span>{formatNumber(filteredSessions.length)} rows</span>
+          </div>
 
-      <RuleStatistics summary={data.ruleSummary} rulesById={rulesById} />
-    </main>
+          <div className="filters">
+            <div>
+              <span>risk_level</span>
+              {riskLevels.map((value) => (
+                <FilterButton
+                  key={value}
+                  value={value}
+                  active={riskFilter === value}
+                  onClick={setRiskFilter}
+                />
+              ))}
+            </div>
+            <div>
+              <span>attack_family</span>
+              {attackFamilies.map((value) => (
+                <FilterButton key={value} value={value} active={familyFilter === value} onClick={setFamilyFilter} />
+              ))}
+            </div>
+            <div>
+              <span>accepted_after_attack</span>
+              {(['all', 'accepted', 'rejected'] as AcceptedFilter[]).map((value) => (
+                <FilterButton key={value} value={value} active={acceptedFilter === value} onClick={setAcceptedFilter} />
+              ))}
+            </div>
+          </div>
+
+          <div className="session-layout">
+            <RiskSessionsTable sessions={filteredSessions} selectedId={selectedId} onSelect={setSelectedId} />
+            <SessionDetail session={selectedSession} rulesById={rulesById} />
+          </div>
+        </section>
+
+        <RuleStatistics summary={data.ruleSummary} rulesById={rulesById} />
+      </main>
+    </div>
   );
 }
 
