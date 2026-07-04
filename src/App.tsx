@@ -13,6 +13,13 @@ import type {
 
 type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 type AcceptedFilter = 'all' | 'accepted' | 'rejected';
+type AccountRiskRow = {
+  accountId: string;
+  attempts: number;
+  accepted: number;
+  avgRiskScore: number;
+  highCritical: number;
+};
 
 const riskLevels: Array<RiskLevel | 'all'> = ['all', 'critical', 'high', 'medium', 'low'];
 const attackFamilies: Array<AttackFamily | 'all'> = ['all', 'pgd', 'fgsm', 'square', 'adaptive'];
@@ -55,6 +62,13 @@ function formatPercent(value: number | null | undefined) {
   return `${formatNumber(value * 100, 2)}%`;
 }
 
+function formatDateTime(value: string) {
+  if (!value) {
+    return '-';
+  }
+  return value.replace('T', ' ').replace('+09:00', '');
+}
+
 function splitRules(ruleHits: string) {
   return ruleHits.split(';').filter(Boolean);
 }
@@ -77,28 +91,22 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
-function ConsoleSidebar({ overview }: { overview: DashboardOverview }) {
+function TopBar() {
   return (
-    <aside className="console-sidebar">
+    <header className="top-bar">
       <div className="brand-block">
-        <span>FA</span>
-        <div>
-          <strong>FaceAuth</strong>
-          <small>Forensics</small>
-        </div>
+        <strong>FaceAuth</strong>
+        <small>Forensics</small>
       </div>
-      <nav className="side-nav" aria-label="Dashboard sections">
+      <nav className="top-nav" aria-label="Dashboard sections">
         <a href="#overview" className="active">Overview</a>
         <a href="#families">Attack Types</a>
         <a href="#sessions">Risk Sessions</a>
+        <a href="#accounts">Accounts</a>
+        <a href="#timeline">Timeline</a>
         <a href="#rules">Rules</a>
       </nav>
-      <div className="sidebar-status">
-        <span>Dataset</span>
-        <strong>{formatNumber(overview.total_sessions)} sessions</strong>
-        <small>2026-06-28 KST</small>
-      </div>
-    </aside>
+    </header>
   );
 }
 
@@ -218,18 +226,21 @@ function RiskSessionsTable({
         <thead>
           <tr>
             <th>session_id</th>
+            <th>timestamp</th>
             <th>account_id</th>
             <th>source_identity</th>
             <th>target_identity</th>
             <th>
               attack_family <InfoTooltip text="PGD, FGSM, Square, Adaptive 공격 유형입니다. 각 유형 카드를 hover하면 뜻을 볼 수 있습니다." />
             </th>
+            <th>epsilon</th>
             <th>similarity_after_attack</th>
             <th>threshold_margin</th>
             <th>accepted_after_attack</th>
             <th>risk_score</th>
             <th>risk_level</th>
             <th>rule_hits</th>
+            <th>adv_file</th>
           </tr>
         </thead>
         <tbody>
@@ -240,10 +251,12 @@ function RiskSessionsTable({
               onClick={() => onSelect(session.session_id)}
             >
               <td>{session.session_id}</td>
+              <td>{formatDateTime(session.timestamp)}</td>
               <td>{session.account_id}</td>
               <td>{session.source_identity}</td>
               <td>{session.target_identity}</td>
               <td title={familyNotes[session.attack_family]}>{familyLabels[session.attack_family]}</td>
+              <td>{formatNumber(session.epsilon, 4)}</td>
               <td>{formatNumber(session.similarity_after_attack, 4)}</td>
               <td>{formatNumber(session.threshold_margin, 4)}</td>
               <td>{session.accepted_after_attack ? 'accepted' : 'rejected'}</td>
@@ -252,6 +265,7 @@ function RiskSessionsTable({
                 <span className={`pill risk-${session.risk_level}`}>{session.risk_level}</span>
               </td>
               <td>{splitRules(session.rule_hits).join(', ')}</td>
+              <td className="path-cell" title={session.adv_file}>{session.adv_file}</td>
             </tr>
           ))}
         </tbody>
@@ -348,10 +362,73 @@ function SessionDetail({
 
       <div className="evidence-paths">
         <h3>Evidence Paths</h3>
+        <code>source: {session.source_file}</code>
+        <code>target: {session.target_enroll_file}</code>
         <code>{session.adv_file}</code>
         <code>{session.perturbation_file}</code>
       </div>
     </aside>
+  );
+}
+
+function AccountRiskPanel({ rows }: { rows: AccountRiskRow[] }) {
+  return (
+    <section className="panel split-panel" id="accounts">
+      <div className="section-heading">
+        <div>
+          <p>Accounts</p>
+          <h2>계정별 위험도</h2>
+        </div>
+      </div>
+      <div className="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>account_id</th>
+              <th>공격 시도</th>
+              <th>공격 성공</th>
+              <th>평균 risk score</th>
+              <th>critical/high</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.accountId}>
+                <td>{row.accountId}</td>
+                <td>{formatNumber(row.attempts)}</td>
+                <td>{formatNumber(row.accepted)}</td>
+                <td>{formatNumber(row.avgRiskScore, 2)}</td>
+                <td>{formatNumber(row.highCritical)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function TimelinePanel({ sessions }: { sessions: AttackSession[] }) {
+  return (
+    <section className="panel split-panel" id="timeline">
+      <div className="section-heading">
+        <div>
+          <p>Timeline</p>
+          <h2>공격 세션 Timeline</h2>
+        </div>
+      </div>
+      <ol className="timeline-list">
+        {sessions.slice(0, 12).map((session) => (
+          <li key={session.session_id}>
+            <time>{formatDateTime(session.timestamp).slice(11, 16)}</time>
+            <strong>{session.session_id}</strong>
+            <span>{familyLabels[session.attack_family]}</span>
+            <span className={`pill risk-${session.risk_level}`}>{session.risk_level}</span>
+            <span>{session.accepted_after_attack ? 'accepted' : 'rejected'}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -444,10 +521,45 @@ function Dashboard({ data }: { data: DashboardData }) {
   }, [filteredSessions, selectedId]);
 
   const selectedSession = attackSessionsById.get(selectedId);
+  const accountRiskRows = useMemo(() => {
+    const rows = new Map<string, { accepted: number; attempts: number; highCritical: number; riskTotal: number }>();
+    data.attackSessions.forEach((session) => {
+      const row = rows.get(session.account_id) ?? {
+        accepted: 0,
+        attempts: 0,
+        highCritical: 0,
+        riskTotal: 0,
+      };
+      row.attempts += 1;
+      row.accepted += session.accepted_after_attack ? 1 : 0;
+      row.highCritical += session.risk_level === 'critical' || session.risk_level === 'high' ? 1 : 0;
+      row.riskTotal += session.risk_score;
+      rows.set(session.account_id, row);
+    });
+
+    return Array.from(rows.entries())
+      .map(([accountId, row]) => ({
+        accountId,
+        attempts: row.attempts,
+        accepted: row.accepted,
+        avgRiskScore: row.riskTotal / row.attempts,
+        highCritical: row.highCritical,
+      }))
+      .sort((a, b) => b.highCritical - a.highCritical || b.avgRiskScore - a.avgRiskScore)
+      .slice(0, 10);
+  }, [data.attackSessions]);
+
+  const timelineSessions = useMemo(
+    () =>
+      [...data.attackSessions]
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+        .filter((session) => session.risk_level === 'critical' || session.risk_level === 'high'),
+    [data.attackSessions],
+  );
 
   return (
     <div className="console-shell">
-      <ConsoleSidebar overview={data.overview} />
+      <TopBar />
       <main className="console-main">
         <header className="app-header">
           <div>
@@ -457,6 +569,7 @@ function Dashboard({ data }: { data: DashboardData }) {
           </div>
           <div className="header-meta">
             <span className="status-dot">Live dataset</span>
+            <span>{formatNumber(data.overview.total_sessions)} sessions</span>
             <span>Updated 2026-06-28</span>
           </div>
         </header>
@@ -504,6 +617,11 @@ function Dashboard({ data }: { data: DashboardData }) {
             <SessionDetail session={selectedSession} rulesById={rulesById} />
           </div>
         </section>
+
+        <div className="secondary-grid">
+          <AccountRiskPanel rows={accountRiskRows} />
+          <TimelinePanel sessions={timelineSessions} />
+        </div>
 
         <RuleStatistics summary={data.ruleSummary} rulesById={rulesById} />
       </main>
