@@ -2,12 +2,18 @@ import type {
   AttackFamilyRow,
   AttackSession,
   DashboardOverview,
+  DefenseAdvTrainingRow,
+  DefenseEnsembleRow,
+  DefenseFeatureSqueezingRow,
+  DefenseHandoffRow,
   RiskSession,
   RuleDefinitionFile,
   RuleHitSummary,
+  TrainingHistory,
 } from './types';
 
 const DATA_BASE = '/forensics';
+const DEFENSE_BASE = '/defense';
 
 const defaultNumberFields = new Set([
   'sessions',
@@ -31,12 +37,39 @@ const defaultNumberFields = new Set([
   'l2',
   'linf',
   'time_sec',
+  'detection_threshold',
+  'n_squeezers_detected',
+  'max_sim_diff',
+  'risk_score_add',
+  'lr_sim_original',
+  'lr_sim_squeezed',
+  'lr_sim_diff',
+  'cd_sim_original',
+  'cd_sim_squeezed',
+  'cd_sim_diff',
+  'mf_sim_original',
+  'mf_sim_squeezed',
+  'mf_sim_diff',
+  'defense_time_sec',
+  'sim_adv_target',
+  'sim_adv_source',
 ]);
 
 const defaultBooleanFields = new Set([
   'accepted_before',
   'attack_success_before_defense',
+  'attack_success_after_defense',
   'is_adaptive',
+  'is_attack_detected',
+  'lr_detected',
+  'cd_detected',
+  'mf_detected',
+  'roi_accepted',
+  'smoothing_accepted',
+  'randomized_accepted',
+  'ensemble_accepted',
+  'accepted_after_defense',
+  'defense_success',
 ]);
 
 function parseCsv(
@@ -117,8 +150,21 @@ async function fetchText(path: string) {
   return response.text();
 }
 
+async function fetchDefenseText(path: string) {
+  const response = await fetch(`${DEFENSE_BASE}/${path}`);
+  if (!response.ok) {
+    throw new Error(`${path} 파일을 불러오지 못했습니다.`);
+  }
+  return response.text();
+}
+
 async function fetchCsv<T>(path: string, options?: Parameters<typeof parseCsv>[1]) {
   const text = await fetchText(path);
+  return parseCsv(text, options) as T[];
+}
+
+async function fetchDefenseCsv<T>(path: string, options?: Parameters<typeof parseCsv>[1]) {
+  const text = await fetchDefenseText(path);
   return parseCsv(text, options) as T[];
 }
 
@@ -144,5 +190,32 @@ export async function loadDashboardData() {
     attackSessions,
     ruleSummary,
     rules: ruleFile.rules,
+  };
+}
+
+export async function loadDefenseDashboardData() {
+  const defenseBooleanFields = new Set([...defaultBooleanFields, 'accepted_after_attack']);
+  const [featureSqueezing, ensemble, advTraining, handoff, trainingHistory] = await Promise.all([
+    fetchDefenseCsv<DefenseFeatureSqueezingRow>('verification_defense_feature_squeezing.csv', {
+      booleanFields: defenseBooleanFields,
+    }),
+    fetchDefenseCsv<DefenseEnsembleRow>('verification_defense_ensemble.csv', {
+      booleanFields: defenseBooleanFields,
+    }),
+    fetchDefenseCsv<DefenseAdvTrainingRow>('verification_defense_adv_training.csv', {
+      booleanFields: defenseBooleanFields,
+    }),
+    fetchDefenseCsv<DefenseHandoffRow>('attack_handoff_jpeg_index.csv', {
+      booleanFields: defenseBooleanFields,
+    }),
+    fetch(`${DEFENSE_BASE}/training_history.json`).then((response) => response.json() as Promise<TrainingHistory>),
+  ]);
+
+  return {
+    featureSqueezing,
+    ensemble,
+    advTraining,
+    handoff,
+    trainingHistory,
   };
 }

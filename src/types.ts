@@ -82,3 +82,94 @@ export interface AttackSession extends RiskSession {
   linf: number | null;
   time_sec: number | null;
 }
+
+export interface DefenseFeatureSqueezingRow {
+  sample_id: string;
+  defense: string;
+  detection_threshold: number;
+  accepted_after_attack: boolean;
+  is_attack_detected: boolean;
+  n_squeezers_detected: number;
+  max_sim_diff: number;
+  risk_score_add: number;
+  lr_sim_original: number;
+  lr_sim_squeezed: number;
+  lr_sim_diff: number;
+  lr_detected: boolean;
+  cd_sim_original: number;
+  cd_sim_squeezed: number;
+  cd_sim_diff: number;
+  cd_detected: boolean;
+  mf_sim_original: number;
+  mf_sim_squeezed: number;
+  mf_sim_diff: number;
+  mf_detected: boolean;
+  defense_time_sec: number;
+}
+
+export interface DefenseEnsembleRow {
+  sample_id: string;
+  defense: string;
+  roi_accepted: boolean;
+  smoothing_accepted: boolean;
+  randomized_accepted: boolean;
+  ensemble_votes: string;
+  ensemble_accepted: boolean;
+  accepted_after_attack: boolean;
+  attack_success_after_defense: boolean;
+  defense_success: boolean;
+}
+
+export interface DefenseAdvTrainingRow {
+  sample_id: string;
+  defense: string;
+  defense_params: string;
+  threshold: number;
+  similarity_after_attack: number;
+  sim_adv_target: number;
+  sim_adv_source: number;
+  accepted_after_attack: boolean;
+  accepted_after_defense: boolean;
+  attack_success_after_defense: boolean;
+  defense_success: boolean;
+}
+
+export interface DefenseHandoffRow {
+  sample_id: string;
+  pair_id: string;
+  attack: string;
+  model: string;
+  pretrained: string;
+  source_file: string;
+  target_enroll_file: string;
+  adv_file: string;
+  perturbation_file: string;
+  source_name: string;
+  target_name: string;
+  threshold: number;
+  similarity_before: number;
+  similarity_after_attack: number;
+  similarity_gain: number;
+  accepted_before: boolean;
+  accepted_after_attack: boolean;
+  attack_success_before_defense: boolean;
+  epsilon: number;
+  alpha: number;
+  steps: number;
+  l2: number;
+  linf: number;
+  time_sec: number;
+}
+
+export interface TrainingHistory {
+  asr_before: number;
+  asr_best: number;
+  epochs: number;
+  lr: number;
+  margin: number;
+  history: Array<{
+    epoch: number;
+    loss: number;
+    asr: number;
+  }>;
+}
