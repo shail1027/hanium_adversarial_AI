@@ -1,18 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadDashboardData } from './data';
+import { loadDashboardData, loadDefenseDashboardData } from './data';
 import type {
   AttackFamily,
   AttackFamilyRow,
   AttackSession,
   DashboardOverview,
+  DefenseAdvTrainingRow,
+  DefenseEnsembleRow,
+  DefenseFeatureSqueezingRow,
+  DefenseHandoffRow,
   RiskLevel,
   RiskSession,
   RuleDefinition,
   RuleHitSummary,
+  TrainingHistory,
 } from './types';
 
 type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
+type DefenseDashboardData = Awaited<ReturnType<typeof loadDefenseDashboardData>>;
 type AcceptedFilter = 'all' | 'accepted' | 'rejected';
+type DashboardMode = 'attack' | 'defense';
 type AccountRiskRow = {
   accountId: string;
   attempts: number;
@@ -91,12 +98,26 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
-function TopBar() {
+function TopBar({
+  activeMode,
+  onModeChange,
+}: {
+  activeMode: DashboardMode;
+  onModeChange: (mode: DashboardMode) => void;
+}) {
   return (
     <header className="top-bar">
       <div className="brand-block">
         <strong>FaceAuth</strong>
         <small>Forensics</small>
+      </div>
+      <div className="mode-switch" aria-label="Dashboard mode">
+        <button className={activeMode === 'attack' ? 'active' : ''} type="button" onClick={() => onModeChange('attack')}>
+          Attack
+        </button>
+        <button className={activeMode === 'defense' ? 'active' : ''} type="button" onClick={() => onModeChange('defense')}>
+          Defense
+        </button>
       </div>
       <nav className="top-nav" aria-label="Dashboard sections">
         <a href="#overview" className="active">Overview</a>
@@ -432,6 +453,282 @@ function TimelinePanel({ sessions }: { sessions: AttackSession[] }) {
   );
 }
 
+function defensePct(numerator: number, denominator: number) {
+  return denominator === 0 ? '0.00%' : formatPercent(numerator / denominator);
+}
+
+function DefenseOverviewCards({
+  advTraining,
+  featureSqueezing,
+}: {
+  advTraining: DefenseAdvTrainingRow[];
+  featureSqueezing: DefenseFeatureSqueezingRow[];
+}) {
+  const total = advTraining.length;
+  const blocked = advTraining.filter((row) => row.defense_success).length;
+  const passed = advTraining.filter((row) => row.accepted_after_defense).length;
+  const detected = featureSqueezing.filter((row) => row.is_attack_detected).length;
+  const risky = featureSqueezing.filter((row) => row.risk_score_add >= 20).length;
+
+  return (
+    <section className="overview-grid defense-overview" id="defense-overview" aria-label="Defense overview">
+      <StatCard label="총 인증 시도" value={formatNumber(total)} />
+      <StatCard label="차단 수" value={formatNumber(blocked)} tone="success" />
+      <StatCard label="통과 수" value={formatNumber(passed)} />
+      <StatCard label="방어 성공률" value={defensePct(blocked, total)} tone="success" />
+      <StatCard label="공격 탐지 수" value={formatNumber(detected)} tone="warning" />
+      <StatCard label="위험 세션" value={formatNumber(risky)} tone="danger" />
+    </section>
+  );
+}
+
+function DefensePipelinePanel({
+  ensemble,
+  advTraining,
+  featureSqueezing,
+}: {
+  ensemble: DefenseEnsembleRow[];
+  advTraining: DefenseAdvTrainingRow[];
+  featureSqueezing: DefenseFeatureSqueezingRow[];
+}) {
+  const total = advTraining.length;
+  const stage2Blocked = ensemble.filter((row) => !row.ensemble_accepted).length;
+  const stage3Blocked = advTraining.filter((row) => !row.accepted_after_defense).length;
+  const stage4Detected = featureSqueezing.filter((row) => row.is_attack_detected).length;
+  const stages = [
+    { label: '1단계 시간적 일관성', value: total, total, status: '정상', note: '정적 이미지 탐지 시 즉시 차단' },
+    { label: '2단계 앙상블 투표', value: stage2Blocked, total: ensemble.length, status: '정상', note: 'ROI / Smoothing / Randomized 다수결' },
+    { label: '3단계 적대적 학습', value: stage3Blocked, total, status: '정상', note: 'fine-tuned FaceNet 재검증' },
+    { label: '4단계 특징압축 포렌식', value: stage4Detected, total: featureSqueezing.length, status: '감시중', note: '3종 squeezer 기반 탐지' },
+  ];
+
+  return (
+    <section className="panel" id="defense-pipeline">
+      <div className="section-heading">
+        <div>
+          <p>Defense Pipeline</p>
+          <h2>방어 파이프라인 상태</h2>
+        </div>
+      </div>
+      <div className="pipeline-list">
+        {stages.map((stage) => (
+          <article key={stage.label}>
+            <div>
+              <strong>{stage.label}</strong>
+              <span>{stage.note}</span>
+            </div>
+            <div className="pipeline-meter">
+              <span style={{ width: `${(stage.value / Math.max(stage.total, 1)) * 100}%` }} />
+            </div>
+            <b>{formatNumber(stage.value)} / {formatNumber(stage.total)} ({defensePct(stage.value, stage.total)})</b>
+            <em>{stage.status}</em>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DefenseSessionLog({
+  rows,
+}: {
+  rows: Array<{
+    adv: DefenseAdvTrainingRow;
+    ensemble?: DefenseEnsembleRow;
+    fs?: DefenseFeatureSqueezingRow;
+    handoff?: DefenseHandoffRow;
+  }>;
+}) {
+  return (
+    <section className="panel" id="defense-sessions">
+      <div className="section-heading">
+        <div>
+          <p>Defense Sessions</p>
+          <h2>세션별 상세 로그</h2>
+        </div>
+        <span>{formatNumber(rows.length)} rows</span>
+      </div>
+      <div className="table-wrap defense-log-table">
+        <table>
+          <thead>
+            <tr>
+              <th>sample_id</th>
+              <th>stage1_blocked</th>
+              <th>stage2_blocked</th>
+              <th>stage3_blocked</th>
+              <th>stage4_detected</th>
+              <th>risk_score</th>
+              <th>final_result</th>
+              <th>sim_score</th>
+              <th>source</th>
+              <th>target</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.slice(0, 80).map(({ adv, ensemble, fs, handoff }) => {
+              const stage2Blocked = ensemble ? !ensemble.ensemble_accepted : false;
+              const stage3Blocked = !adv.accepted_after_defense;
+              const finalResult = stage2Blocked || stage3Blocked ? 'BLOCKED' : 'PASSED';
+              return (
+                <tr key={adv.sample_id}>
+                  <td>{adv.sample_id}</td>
+                  <td>simulated</td>
+                  <td>{stage2Blocked ? 'true' : 'false'}</td>
+                  <td>{stage3Blocked ? 'true' : 'false'}</td>
+                  <td>{fs?.is_attack_detected ? 'true' : 'false'}</td>
+                  <td>{fs?.risk_score_add ?? 0}</td>
+                  <td>
+                    <span className={`pill ${finalResult === 'BLOCKED' ? 'risk-low' : 'risk-critical'}`}>{finalResult}</span>
+                  </td>
+                  <td>{formatNumber(adv.sim_adv_target, 4)}</td>
+                  <td>{handoff?.source_name ?? '-'}</td>
+                  <td>{handoff?.target_name ?? '-'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function FeatureSqueezingPanel({ rows }: { rows: DefenseFeatureSqueezingRow[] }) {
+  const total = rows.length;
+  const squeezers = [
+    { key: 'lr', label: 'Low Resolution', detected: rows.filter((row) => row.lr_detected).length, description: '32x32 축소로 고주파 perturbation 제거' },
+    { key: 'cd', label: 'Color Depth', detected: rows.filter((row) => row.cd_detected).length, description: '4-bit 양자화로 미세 픽셀 변화 소거' },
+    { key: 'mf', label: 'Median Filter', detected: rows.filter((row) => row.mf_detected).length, description: '3x3 필터로 국소 perturbation 평활화' },
+  ];
+  const topRiskRows = [...rows].sort((a, b) => b.risk_score_add - a.risk_score_add || b.max_sim_diff - a.max_sim_diff).slice(0, 8);
+
+  return (
+    <section className="panel" id="feature-squeezing">
+      <div className="section-heading">
+        <div>
+          <p>Feature Squeezing</p>
+          <h2>특징 압축 포렌식</h2>
+        </div>
+      </div>
+      <div className="squeezer-grid">
+        {squeezers.map((squeezer) => (
+          <article key={squeezer.key}>
+            <strong>{squeezer.label}</strong>
+            <b>{defensePct(squeezer.detected, total)}</b>
+            <span>{squeezer.description}</span>
+          </article>
+        ))}
+      </div>
+      <div className="table-wrap compact-table">
+        <table>
+          <thead>
+            <tr>
+              <th>sample_id</th>
+              <th>risk_score_add</th>
+              <th>lr_sim_diff</th>
+              <th>cd_sim_diff</th>
+              <th>mf_sim_diff</th>
+              <th>max_sim_diff</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topRiskRows.map((row) => (
+              <tr key={row.sample_id}>
+                <td>{row.sample_id}</td>
+                <td>{row.risk_score_add}</td>
+                <td>{formatNumber(row.lr_sim_diff, 4)}</td>
+                <td>{formatNumber(row.cd_sim_diff, 4)}</td>
+                <td>{formatNumber(row.mf_sim_diff, 4)}</td>
+                <td>{formatNumber(row.max_sim_diff, 4)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function AdvTrainingPanel({ history }: { history: TrainingHistory }) {
+  return (
+    <section className="panel" id="adv-training">
+      <div className="section-heading">
+        <div>
+          <p>Model Status</p>
+          <h2>적대적 학습 모델 상태</h2>
+        </div>
+      </div>
+      <div className="model-summary">
+        <div>
+          <span>모델 버전</span>
+          <strong>best_adv_trained.pt</strong>
+        </div>
+        <div>
+          <span>학습 전 ASR</span>
+          <strong>{formatPercent(history.asr_before)}</strong>
+        </div>
+        <div>
+          <span>학습 후 ASR</span>
+          <strong>{formatPercent(history.asr_best)}</strong>
+        </div>
+        <div>
+          <span>방어 성공률</span>
+          <strong>{formatPercent(1 - history.asr_best)}</strong>
+        </div>
+      </div>
+      <div className="training-history">
+        {history.history.map((epoch) => (
+          <article key={epoch.epoch} className={epoch.asr === history.asr_best ? 'best' : ''}>
+            <span>Epoch {epoch.epoch}</span>
+            <strong>Loss {formatNumber(epoch.loss, 4)}</strong>
+            <b>ASR {formatPercent(epoch.asr)}</b>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DefenseDashboard({ data }: { data: DefenseDashboardData }) {
+  const ensembleById = useMemo(() => new Map(data.ensemble.map((row) => [row.sample_id, row])), [data.ensemble]);
+  const fsById = useMemo(() => new Map(data.featureSqueezing.map((row) => [row.sample_id, row])), [data.featureSqueezing]);
+  const handoffById = useMemo(() => new Map(data.handoff.map((row) => [row.sample_id, row])), [data.handoff]);
+  const sessionRows = useMemo(
+    () =>
+      data.advTraining.map((adv) => ({
+        adv,
+        ensemble: ensembleById.get(adv.sample_id),
+        fs: fsById.get(adv.sample_id),
+        handoff: handoffById.get(adv.sample_id),
+      })),
+    [data.advTraining, ensembleById, fsById, handoffById],
+  );
+
+  return (
+    <>
+      <header className="app-header">
+        <div>
+          <p>Financial FaceAuth Defense</p>
+          <h1>Defense Pipeline</h1>
+          <span className="header-description">4단계 방어 파이프라인의 차단 성능, 위험도, 포렌식 탐지 근거를 점검합니다.</span>
+        </div>
+        <div className="header-meta">
+          <span className="status-dot">Static experiment</span>
+          <span>{formatNumber(data.advTraining.length)} samples</span>
+          <span>Updated 2026-07-07</span>
+        </div>
+      </header>
+      <DefenseOverviewCards advTraining={data.advTraining} featureSqueezing={data.featureSqueezing} />
+      <DefensePipelinePanel ensemble={data.ensemble} advTraining={data.advTraining} featureSqueezing={data.featureSqueezing} />
+      <DefenseSessionLog rows={sessionRows} />
+      <div className="secondary-grid">
+        <FeatureSqueezingPanel rows={data.featureSqueezing} />
+        <AdvTrainingPanel history={data.trainingHistory} />
+      </div>
+    </>
+  );
+}
+
 function RuleStatistics({
   summary,
   rulesById,
@@ -484,7 +781,7 @@ function RuleStatistics({
   );
 }
 
-function Dashboard({ data }: { data: DashboardData }) {
+function AttackDashboard({ data }: { data: DashboardData }) {
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all');
   const [familyFilter, setFamilyFilter] = useState<AttackFamily | 'all'>('all');
   const [acceptedFilter, setAcceptedFilter] = useState<AcceptedFilter>('all');
@@ -558,9 +855,7 @@ function Dashboard({ data }: { data: DashboardData }) {
   );
 
   return (
-    <div className="console-shell">
-      <TopBar />
-      <main className="console-main">
+    <>
         <header className="app-header">
           <div>
             <p>Financial FaceAuth Operations</p>
@@ -624,26 +919,39 @@ function Dashboard({ data }: { data: DashboardData }) {
         </div>
 
         <RuleStatistics summary={data.ruleSummary} rulesById={rulesById} />
-      </main>
-    </div>
+    </>
   );
 }
 
 export function App() {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [attackData, setAttackData] = useState<DashboardData | null>(null);
+  const [defenseData, setDefenseData] = useState<DefenseDashboardData | null>(null);
+  const [activeMode, setActiveMode] = useState<DashboardMode>('attack');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData().then(setData).catch((error: Error) => setError(error.message));
+    Promise.all([loadDashboardData(), loadDefenseDashboardData()])
+      .then(([attack, defense]) => {
+        setAttackData(attack);
+        setDefenseData(defense);
+      })
+      .catch((error: Error) => setError(error.message));
   }, []);
 
   if (error) {
     return <div className="state-message">데이터 로드 실패: {error}</div>;
   }
 
-  if (!data) {
-    return <div className="state-message">포렌식 데이터를 불러오는 중입니다.</div>;
+  if (!attackData || !defenseData) {
+    return <div className="state-message">대시보드 데이터를 불러오는 중입니다.</div>;
   }
 
-  return <Dashboard data={data} />;
+  return (
+    <div className="console-shell">
+      <TopBar activeMode={activeMode} onModeChange={setActiveMode} />
+      <main className="console-main">
+        {activeMode === 'attack' ? <AttackDashboard data={attackData} /> : <DefenseDashboard data={defenseData} />}
+      </main>
+    </div>
+  );
 }
