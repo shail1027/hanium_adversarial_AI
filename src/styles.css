@@ -108,6 +108,31 @@ button {
   color: var(--ink);
 }
 
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+
+.mode-switch button {
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mode-switch button:last-child {
+  border-right: 0;
+}
+
+.mode-switch button.active {
+  background: var(--ink);
+  color: var(--paper-raised);
+}
+
 .console-main {
   min-width: 0;
   padding: 26px 24px 48px;
@@ -723,6 +748,108 @@ dd {
   align-items: start;
 }
 
+.defense-overview {
+  scroll-margin-top: 80px;
+}
+
+.pipeline-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.pipeline-list article {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.8fr) 160px 72px;
+  gap: 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.pipeline-list strong,
+.pipeline-list span {
+  display: block;
+}
+
+.pipeline-list strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.pipeline-list span {
+  margin-top: 3px;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+}
+
+.pipeline-list b {
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pipeline-list em {
+  color: var(--success);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pipeline-meter {
+  height: 6px;
+  background: var(--line);
+}
+
+.pipeline-meter span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.defense-log-table table {
+  min-width: 1180px;
+}
+
+.squeezer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 16px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.squeezer-grid article {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 14px;
+}
+
+.squeezer-grid strong,
+.squeezer-grid b,
+.squeezer-grid span {
+  display: block;
+}
+
+.squeezer-grid strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.squeezer-grid b {
+  margin: 8px 0;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.3rem;
+}
+
+.squeezer-grid span {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
 .split-panel {
   min-width: 0;
 }
@@ -800,6 +927,11 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .pipeline-list article {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
   .detail-panel {
     position: static;
     max-height: none;
@@ -825,6 +957,7 @@ dd {
   .overview-grid,
   .family-grid,
   .filters,
+  .squeezer-grid,
   .timeline-list li,
   .detail-grid {
     grid-template-columns: 1fr;
