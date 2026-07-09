@@ -649,6 +649,36 @@ function FeatureSqueezingPanel({ rows }: { rows: DefenseFeatureSqueezingRow[] })
   );
 }
 
+function RiskScoreGuidePanel() {
+  const rules = [
+    { event: 'Feature Squeezing 1개 squeezer 탐지', score: '+10', level: '주의' },
+    { event: 'Feature Squeezing 2개 squeezer 탐지', score: '+20', level: '주의' },
+    { event: 'Feature Squeezing 3개 squeezer 탐지', score: '+30', level: '위험' },
+    { event: '2단계 앙상블에서 차단됨', score: '+40', level: '위험' },
+    { event: '1단계 시간적 일관성에서 차단됨', score: '+50', level: '위험' },
+  ];
+
+  return (
+    <section className="panel" id="risk-score">
+      <div className="section-heading">
+        <div>
+          <p>Risk Score</p>
+          <h2>위험도 스코어 기준</h2>
+        </div>
+      </div>
+      <div className="risk-score-guide">
+        {rules.map((rule) => (
+          <article key={rule.event}>
+            <span>{rule.event}</span>
+            <strong>{rule.score}</strong>
+            <b>{rule.level}</b>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function AdvTrainingPanel({ history }: { history: TrainingHistory }) {
   return (
     <section className="panel" id="adv-training">
@@ -662,6 +692,18 @@ function AdvTrainingPanel({ history }: { history: TrainingHistory }) {
         <div>
           <span>모델 버전</span>
           <strong>best_adv_trained.pt</strong>
+        </div>
+        <div>
+          <span>Epochs</span>
+          <strong>{history.epochs}</strong>
+        </div>
+        <div>
+          <span>Learning Rate</span>
+          <strong>{history.lr}</strong>
+        </div>
+        <div>
+          <span>Margin</span>
+          <strong>{history.margin}</strong>
         </div>
         <div>
           <span>학습 전 ASR</span>
@@ -722,7 +764,10 @@ function DefenseDashboard({ data }: { data: DefenseDashboardData }) {
       <DefensePipelinePanel ensemble={data.ensemble} advTraining={data.advTraining} featureSqueezing={data.featureSqueezing} />
       <DefenseSessionLog rows={sessionRows} />
       <div className="secondary-grid">
+        <RiskScoreGuidePanel />
         <FeatureSqueezingPanel rows={data.featureSqueezing} />
+      </div>
+      <div className="secondary-grid defense-analysis-grid">
         <AdvTrainingPanel history={data.trainingHistory} />
       </div>
     </>

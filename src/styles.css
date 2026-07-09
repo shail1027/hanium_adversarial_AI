@@ -850,6 +850,99 @@ dd {
   font-size: 0.8rem;
 }
 
+.risk-score-guide {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.risk-score-guide article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 54px;
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+.risk-score-guide span {
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.risk-score-guide strong {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.risk-score-guide b {
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+
+.model-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 16px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.model-summary div {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 12px;
+}
+
+.model-summary span,
+.model-summary strong {
+  display: block;
+}
+
+.model-summary span {
+  color: var(--ink-faint);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.model-summary strong {
+  margin-top: 6px;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.98rem;
+}
+
+.training-history {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.training-history article {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) 92px;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 9px 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.training-history article.best {
+  color: var(--success);
+}
+
+.training-history strong,
+.training-history b {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.defense-analysis-grid {
+  grid-template-columns: 1fr;
+}
+
 .split-panel {
   min-width: 0;
 }
@@ -958,6 +1051,9 @@ dd {
   .family-grid,
   .filters,
   .squeezer-grid,
+  .model-summary,
+  .risk-score-guide article,
+  .training-history article,
   .timeline-list li,
   .detail-grid {
     grid-template-columns: 1fr;
