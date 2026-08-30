@@ -1,6 +1,6 @@
 # Hanium Adversarial AI Dashboard
 
-금융 얼굴인증 공격 포렌식과 방어 파이프라인 결과를 운영자가 빠르게 확인하기 위한 React 대시보드입니다.
+금융 얼굴인증 시연 플로우와 공격 포렌식·방어 파이프라인 결과를 확인하기 위한 fullstack 데모입니다.
 
 ## Branch Strategy
 
@@ -10,8 +10,10 @@
 ## Run
 
 ```bash
-npm install
+npm --prefix frontend install
 npm run dev
+python3 -m pip install -r backend/requirements.txt
+npm run backend
 ```
 
 ## Build
@@ -20,9 +22,16 @@ npm run dev
 npm run build
 ```
 
+## Structure
+
+- `frontend/`: React/Vite 사용자 인증 화면과 관리자 대시보드
+- `backend/`: FastAPI 인증·대시보드 API
+- `schemas/`: 외부 API contract schema
+- `docs/`: 대시보드와 API 연동 문서
+
 ## Data
 
-대시보드는 `public/forensics`와 `public/defense` 아래의 정적 산출물을 읽습니다.
+프론트엔드는 `frontend/public/forensics`, `frontend/public/defense`, `frontend/public/hc160` 아래의 정적 산출물을 읽고, FastAPI 서버는 같은 계약의 API 응답을 제공합니다.
 
 ### Attack Forensics
 
