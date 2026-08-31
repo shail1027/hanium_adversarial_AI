@@ -1,5 +1,9 @@
 node_modules
 dist
+.venv
+backend/.venv
+__pycache__
+*.py[cod]
 .DS_Store
 *.local
 *.tsbuildinfo
