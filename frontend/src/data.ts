@@ -14,6 +14,7 @@ import type {
   RuleHitSummary,
   TrainingHistory,
 } from './types';
+import { getHc160SessionResult, getHc160SessionSummaries, getHc160SystemStatus } from './api';
 
 const DATA_BASE = '/forensics';
 const DEFENSE_BASE = '/defense';
@@ -226,9 +227,9 @@ export async function loadDefenseDashboardData() {
 
 export async function loadHc160DashboardData() {
   const [sessionResult, sessionSummaries, systemStatus] = await Promise.all([
-    fetch(`${HC160_BASE}/session-result.json`).then((response) => response.json() as Promise<HcSessionResult>),
-    fetch(`${HC160_BASE}/session-summaries.json`).then((response) => response.json() as Promise<HcSessionSummary[]>),
-    fetch(`${HC160_BASE}/system-status.json`).then((response) => response.json() as Promise<HcSystemStatusRow[]>),
+    getHc160SessionResult(() => fetch(`${HC160_BASE}/session-result.json`).then((response) => response.json() as Promise<HcSessionResult>)),
+    getHc160SessionSummaries(() => fetch(`${HC160_BASE}/session-summaries.json`).then((response) => response.json() as Promise<HcSessionSummary[]>)),
+    getHc160SystemStatus(() => fetch(`${HC160_BASE}/system-status.json`).then((response) => response.json() as Promise<HcSystemStatusRow[]>)),
   ]);
 
   return {
