@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import { loadDashboardData, loadDefenseDashboardData, loadHc160DashboardData } from './data';
+import { login } from './api';
+import type { LoginResponse } from './api';
 import type {
   AttackFamily,
   AttackFamilyRow,
@@ -55,6 +58,69 @@ const decisionLabels: Record<HcFinalDecision, string> = {
   REJECT: '인증 거부',
   ERROR: '처리 오류',
 };
+
+function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
+  const [username, setUsername] = useState('user');
+  const [password, setPassword] = useState('demo');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setMessage(null);
+    try {
+      const user = await login(username, password);
+      onLogin(user);
+    } catch {
+      setMessage('서버 연결에 실패했습니다. FastAPI 서버가 실행 중인지 확인하세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="login-shell">
+      <section className="login-panel">
+        <div>
+          <p>FaceAuth Demo</p>
+          <h1>금융 얼굴인증 시연</h1>
+          <span>일반 사용자는 얼굴인증 플로우로, 관리자는 운영 대시보드로 진입합니다.</span>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <label>
+            <span>아이디</span>
+            <input value={username} onChange={(event) => setUsername(event.target.value)} />
+          </label>
+          <label>
+            <span>비밀번호</span>
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          </label>
+          {message && <p className="form-message">{message}</p>}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? '로그인 중' : '로그인'}
+          </button>
+        </form>
+        <div className="demo-accounts">
+          <button type="button" onClick={() => setUsername('user')}>일반 사용자</button>
+          <button type="button" onClick={() => setUsername('admin')}>관리자</button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function UserAuthShell({ user }: { user: LoginResponse }) {
+  return (
+    <main className="user-shell">
+      <section className="panel user-card">
+        <p>Customer FaceAuth</p>
+        <h1>{user.display_name}</h1>
+        <span className="header-description">다음 단계에서 카메라 기반 얼굴인증 시연 화면을 제공합니다.</span>
+      </section>
+    </main>
+  );
+}
 
 const familyNotes: Record<AttackFamily, string> = {
   pgd: '모델 내부 정보를 알고 반복적으로 이미지를 조금씩 바꾸는 강한 공격입니다.',
@@ -1330,6 +1396,7 @@ export function App() {
   const [defenseData, setDefenseData] = useState<DefenseDashboardData | null>(null);
   const [hc160Data, setHc160Data] = useState<Hc160DashboardData | null>(null);
   const [activeMode, setActiveMode] = useState<DashboardMode>('attack');
+  const [currentUser, setCurrentUser] = useState<LoginResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1344,6 +1411,14 @@ export function App() {
 
   if (error) {
     return <div className="state-message">데이터 로드 실패: {error}</div>;
+  }
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={setCurrentUser} />;
+  }
+
+  if (currentUser.role === 'user') {
+    return <UserAuthShell user={currentUser} />;
   }
 
   if (!attackData || !defenseData || !hc160Data) {
