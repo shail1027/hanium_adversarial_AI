@@ -1279,6 +1279,126 @@ dd {
   width: min(100%, 720px);
 }
 
+.face-auth-card {
+  width: min(100%, 820px);
+}
+
+.face-auth-card .section-heading button {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.camera-preview {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(90deg, rgba(192, 197, 217, 0.35) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(192, 197, 217, 0.35) 1px, transparent 1px),
+    var(--paper);
+  background-size: 42px 42px;
+  text-align: center;
+}
+
+.camera-preview div {
+  display: grid;
+  justify-items: center;
+  max-width: 360px;
+}
+
+.camera-preview span {
+  width: 86px;
+  height: 112px;
+  border: 2px solid var(--ink);
+  border-radius: 46% 46% 42% 42%;
+  background: var(--paper-raised);
+}
+
+.camera-preview strong {
+  margin-top: 18px;
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.camera-preview p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.auth-actions > button,
+.auth-actions div button {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper-raised);
+  padding: 9px 12px;
+  font-weight: 800;
+}
+
+.auth-actions div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-actions div button {
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+}
+
+.auth-result {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line-strong);
+  padding-top: 16px;
+}
+
+.auth-result > div:first-child {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-result strong {
+  color: var(--ink);
+  font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 1.28rem;
+}
+
+.auth-result p {
+  margin: 0;
+  color: var(--ink-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.solution-box {
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid var(--warning);
+  padding-left: 12px;
+}
+
+.solution-box span {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
 @media (max-width: 1180px) {
   .top-bar {
     flex-wrap: wrap;

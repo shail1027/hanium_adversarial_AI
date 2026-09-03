@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { loadDashboardData, loadDefenseDashboardData, loadHc160DashboardData } from './data';
-import { login } from './api';
-import type { LoginResponse } from './api';
+import { login, startFaceAuth, verifyFaceAuth } from './api';
+import type { FaceAuthStartResponse, FaceAuthVerifyResponse, LoginResponse } from './api';
 import type {
   AttackFamily,
   AttackFamilyRow,
@@ -110,13 +110,111 @@ function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
   );
 }
 
-function UserAuthShell({ user }: { user: LoginResponse }) {
+type DemoScenario = 'normal' | 'attack' | 'quality_fail' | 'timeout';
+
+const scenarioLabels: Record<DemoScenario, string> = {
+  normal: '정상 인증',
+  attack: '공격 탐지',
+  quality_fail: '품질 실패',
+  timeout: '타임아웃',
+};
+
+function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () => void }) {
+  const [started, setStarted] = useState<FaceAuthStartResponse | null>(null);
+  const [result, setResult] = useState<FaceAuthVerifyResponse | null>(null);
+  const [isWorking, setIsWorking] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleStart() {
+    setIsWorking(true);
+    setMessage(null);
+    setResult(null);
+    try {
+      setStarted(await startFaceAuth(user.display_name));
+    } catch {
+      setMessage('인증 세션을 시작하지 못했습니다. 백엔드 서버를 확인하세요.');
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function handleVerify(scenario: DemoScenario) {
+    if (!started) {
+      return;
+    }
+    setIsWorking(true);
+    setMessage(null);
+    try {
+      setResult(await verifyFaceAuth(started.session_id, scenario));
+    } catch {
+      setMessage('인증 결과를 가져오지 못했습니다. 백엔드 서버를 확인하세요.');
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
   return (
     <main className="user-shell">
-      <section className="panel user-card">
-        <p>Customer FaceAuth</p>
-        <h1>{user.display_name}</h1>
-        <span className="header-description">다음 단계에서 카메라 기반 얼굴인증 시연 화면을 제공합니다.</span>
+      <section className="panel user-card face-auth-card">
+        <div className="section-heading">
+          <div>
+            <p>Customer FaceAuth</p>
+            <h1>{user.display_name}</h1>
+            <span className="header-description">얼굴인증 결과는 FastAPI 서버가 반환한 값을 그대로 표시합니다.</span>
+          </div>
+          <button type="button" onClick={onLogout}>로그아웃</button>
+        </div>
+
+        <div className="camera-preview" aria-label="Face authentication preview">
+          <div>
+            <span />
+            <strong>{started ? '인증 세션 진행 중' : '얼굴인증 대기'}</strong>
+            <p>{started?.challenge ?? '시작 버튼을 눌러 인증 세션을 생성하세요.'}</p>
+          </div>
+        </div>
+
+        <div className="auth-actions">
+          <button type="button" onClick={handleStart} disabled={isWorking}>
+            {started ? '세션 다시 시작' : '얼굴인증 시작'}
+          </button>
+          {started && (
+            <div>
+              {(Object.keys(scenarioLabels) as DemoScenario[]).map((scenario) => (
+                <button type="button" key={scenario} onClick={() => handleVerify(scenario)} disabled={isWorking}>
+                  {scenarioLabels[scenario]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {message && <p className="form-message">{message}</p>}
+
+        {result && (
+          <section className={`auth-result result-${result.session.final_decision.toLowerCase()}`}>
+            <div>
+              <span className={`pill ${decisionTone(result.session.final_decision)}`}>{result.session.final_decision}</span>
+              <strong>{result.user_message}</strong>
+              <p>session_id: {result.session.session_id}</p>
+            </div>
+            {result.attack_detected && (
+              <div className="solution-box">
+                <h2>경고 및 솔루션</h2>
+                {result.solutions.map((solution) => (
+                  <span key={solution}>{solution}</span>
+                ))}
+              </div>
+            )}
+            {!result.attack_detected && result.solutions.length > 0 && (
+              <div className="solution-box">
+                <h2>다음 조치</h2>
+                {result.solutions.map((solution) => (
+                  <span key={solution}>{solution}</span>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </section>
     </main>
   );
@@ -1418,7 +1516,7 @@ export function App() {
   }
 
   if (currentUser.role === 'user') {
-    return <UserAuthShell user={currentUser} />;
+    return <UserAuthShell user={currentUser} onLogout={() => setCurrentUser(null)} />;
   }
 
   if (!attackData || !defenseData || !hc160Data) {
