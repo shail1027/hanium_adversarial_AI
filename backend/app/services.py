@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from uuid import uuid4
 
-from .fixtures import load_json, session_fixture_for_scenario
+from .fixtures import FRONTEND_PUBLIC, load_json, session_fixture_for_scenario
 from .models import (
     FaceAuthStartResponse,
     FaceAuthVerifyResponse,
@@ -83,6 +84,16 @@ class DemoFaceAuthService:
 
 
 class DashboardService:
+    allowed_static_roots = {"forensics", "defense", "hc160"}
+
+    def static_file(self, dataset: str, file_name: str) -> Path:
+        if dataset not in self.allowed_static_roots or "/" in file_name or ".." in file_name:
+            raise FileNotFoundError("Unsupported dashboard file")
+        path = FRONTEND_PUBLIC / dataset / file_name
+        if not path.exists() or not path.is_file():
+            raise FileNotFoundError(file_name)
+        return path
+
     def hc160_result(self):
         return load_json("hc160/session-result.json")
 

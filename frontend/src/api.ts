@@ -84,3 +84,19 @@ export async function getHc160SystemStatus(fallback: () => Promise<HcSystemStatu
     return fallback();
   }
 }
+
+export async function getDashboardText(dataset: 'forensics' | 'defense' | 'hc160', fileName: string, fallbackPath: string) {
+  try {
+    const response = await fetch(`${API_BASE}/dashboard/static/${dataset}/${fileName}`);
+    if (!response.ok) {
+      throw new Error('API static file unavailable');
+    }
+    return await response.text();
+  } catch {
+    const response = await fetch(fallbackPath);
+    if (!response.ok) {
+      throw new Error(`${fallbackPath} 파일을 불러오지 못했습니다.`);
+    }
+    return response.text();
+  }
+}

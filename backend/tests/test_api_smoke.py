@@ -38,3 +38,16 @@ def test_attack_detection_returns_step_up_warning():
     assert body["session"]["final_decision"] == "STEP_UP"
     assert body["attack_detected"] is True
     assert body["next_action"] == "step_up"
+
+
+def test_dashboard_static_file_allowlist():
+    response = client.get("/api/dashboard/static/forensics/dashboard_overview.json")
+
+    assert response.status_code == 200
+    assert response.json()["total_sessions"] == 2000
+
+
+def test_dashboard_static_file_rejects_unknown_dataset():
+    response = client.get("/api/dashboard/static/private/secrets.json")
+
+    assert response.status_code == 404

@@ -14,7 +14,7 @@ import type {
   RuleHitSummary,
   TrainingHistory,
 } from './types';
-import { getHc160SessionResult, getHc160SessionSummaries, getHc160SystemStatus } from './api';
+import { getDashboardText, getHc160SessionResult, getHc160SessionSummaries, getHc160SystemStatus } from './api';
 
 const DATA_BASE = '/forensics';
 const DEFENSE_BASE = '/defense';
@@ -148,19 +148,11 @@ function parseCsv(
 }
 
 async function fetchText(path: string) {
-  const response = await fetch(`${DATA_BASE}/${path}`);
-  if (!response.ok) {
-    throw new Error(`${path} 파일을 불러오지 못했습니다.`);
-  }
-  return response.text();
+  return getDashboardText('forensics', path, `${DATA_BASE}/${path}`);
 }
 
 async function fetchDefenseText(path: string) {
-  const response = await fetch(`${DEFENSE_BASE}/${path}`);
-  if (!response.ok) {
-    throw new Error(`${path} 파일을 불러오지 못했습니다.`);
-  }
-  return response.text();
+  return getDashboardText('defense', path, `${DEFENSE_BASE}/${path}`);
 }
 
 async function fetchCsv<T>(path: string, options?: Parameters<typeof parseCsv>[1]) {
@@ -176,7 +168,7 @@ async function fetchDefenseCsv<T>(path: string, options?: Parameters<typeof pars
 export async function loadDashboardData() {
   const [overview, familyRows, topRiskSessions, attackSessions, ruleSummary, ruleFile] =
     await Promise.all([
-      fetch(`${DATA_BASE}/dashboard_overview.json`).then((response) => response.json() as Promise<DashboardOverview>),
+      fetchText('dashboard_overview.json').then((text) => JSON.parse(text) as DashboardOverview),
       fetchCsv<AttackFamilyRow>('attack_family_matrix.csv'),
       fetchCsv<RiskSession>('top_risk_sessions.csv', {
         booleanFields: new Set([...defaultBooleanFields, 'accepted_after_attack']),
@@ -185,7 +177,7 @@ export async function loadDashboardData() {
         booleanFields: new Set([...defaultBooleanFields, 'accepted_after_attack']),
       }),
       fetchCsv<RuleHitSummary>('rule_hit_summary.csv'),
-      fetch(`${DATA_BASE}/attack_detection_rules.json`).then((response) => response.json() as Promise<RuleDefinitionFile>),
+      fetchText('attack_detection_rules.json').then((text) => JSON.parse(text) as RuleDefinitionFile),
     ]);
 
   return {
@@ -213,7 +205,7 @@ export async function loadDefenseDashboardData() {
     fetchDefenseCsv<DefenseHandoffRow>('attack_handoff_jpeg_index.csv', {
       booleanFields: defenseBooleanFields,
     }),
-    fetch(`${DEFENSE_BASE}/training_history.json`).then((response) => response.json() as Promise<TrainingHistory>),
+    fetchDefenseText('training_history.json').then((text) => JSON.parse(text) as TrainingHistory),
   ]);
 
   return {

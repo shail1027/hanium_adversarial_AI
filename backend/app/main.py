@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from .models import FaceAuthStartRequest, FaceAuthVerifyRequest, LoginRequest
 from .services import DashboardService, DemoAuthService, DemoFaceAuthService
@@ -55,3 +56,11 @@ def hc160_session_summaries():
 @app.get("/api/dashboard/hc160/system-status")
 def hc160_system_status():
     return dashboard_service.system_status()
+
+
+@app.get("/api/dashboard/static/{dataset}/{file_name}")
+def dashboard_static_file(dataset: str, file_name: str):
+    try:
+        return FileResponse(dashboard_service.static_file(dataset, file_name))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="dashboard file not found") from exc
