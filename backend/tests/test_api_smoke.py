@@ -40,6 +40,54 @@ def test_attack_detection_returns_step_up_warning():
     assert body["next_action"] == "step_up"
 
 
+def test_normal_face_auth_accepts():
+    started = client.post(
+        "/api/face/start",
+        json={"user_id": "demo-user", "purpose": "LOGIN"},
+    ).json()
+    response = client.post(
+        "/api/face/verify",
+        json={"session_id": started["session_id"], "scenario": "normal"},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["session"]["final_decision"] == "ACCEPT"
+    assert body["next_action"] == "continue"
+
+
+def test_quality_failure_rejects_without_attack_warning():
+    started = client.post(
+        "/api/face/start",
+        json={"user_id": "demo-user", "purpose": "LOGIN"},
+    ).json()
+    response = client.post(
+        "/api/face/verify",
+        json={"session_id": started["session_id"], "scenario": "quality_fail"},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["session"]["final_decision"] == "REJECT"
+    assert body["attack_detected"] is False
+
+
+def test_timeout_returns_error_retry():
+    started = client.post(
+        "/api/face/start",
+        json={"user_id": "demo-user", "purpose": "LOGIN"},
+    ).json()
+    response = client.post(
+        "/api/face/verify",
+        json={"session_id": started["session_id"], "scenario": "timeout"},
+    )
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["session"]["final_decision"] == "ERROR"
+    assert body["next_action"] == "retry"
+
+
 def test_dashboard_static_file_allowlist():
     response = client.get("/api/dashboard/static/forensics/dashboard_overview.json")
 

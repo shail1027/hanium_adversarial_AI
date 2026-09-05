@@ -29,6 +29,10 @@ npm run build
 - `schemas/`: 외부 API contract schema
 - `docs/`: 대시보드와 API 연동 문서
 
+## Demo Scenario
+
+시연 흐름은 [docs/demo-scenario.md](docs/demo-scenario.md)에 정리되어 있습니다.
+
 ## Data
 
 프론트엔드는 `frontend/public/forensics`, `frontend/public/defense`, `frontend/public/hc160` 아래의 정적 산출물을 읽고, FastAPI 서버는 같은 계약의 API 응답을 제공합니다.
