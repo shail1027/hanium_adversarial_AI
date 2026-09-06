@@ -108,6 +108,28 @@ button {
   color: var(--ink);
 }
 
+.admin-session {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.admin-session span {
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-session button {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .mode-switch {
   display: inline-flex;
   border: 1px solid var(--line-strong);
@@ -1399,6 +1421,49 @@ dd {
   font-size: 0.88rem;
 }
 
+.user-result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.user-result-grid div {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+}
+
+.user-result-grid span,
+.customer-gate-list span {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.user-result-grid strong {
+  display: block;
+  margin-top: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.customer-gate-list {
+  display: grid;
+  gap: 6px;
+}
+
+.customer-gate-list:empty {
+  display: none;
+}
+
+.customer-gate-list span {
+  border-left: 2px solid var(--danger);
+  padding: 4px 0 4px 9px;
+  color: var(--ink-soft);
+}
+
 @media (max-width: 1180px) {
   .top-bar {
     flex-wrap: wrap;
@@ -1410,6 +1475,10 @@ dd {
     width: 100%;
     margin-right: 0;
     overflow-x: auto;
+  }
+
+  .admin-session {
+    margin-left: auto;
   }
 
   .overview-grid,
@@ -1465,7 +1534,8 @@ dd {
   .family-grid,
   .filters,
   .squeezer-grid,
-    .model-summary,
+  .model-summary,
+  .user-result-grid,
   .decision-board,
   .gate-body dl,
   .risk-score-guide article,

@@ -197,6 +197,33 @@ function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () =
               <strong>{result.user_message}</strong>
               <p>session_id: {result.session.session_id}</p>
             </div>
+            <div className="user-result-grid">
+              <div>
+                <span>다음 행동</span>
+                <strong>{result.next_action}</strong>
+              </div>
+              <div>
+                <span>처리 상태</span>
+                <strong>{result.session.status}</strong>
+              </div>
+              <div>
+                <span>처리 시간</span>
+                <strong>{formatNumber(result.session.latency_ms)}ms</strong>
+              </div>
+              <div>
+                <span>질의 예산</span>
+                <strong>{result.session.query_budget.used}/{result.session.query_budget.limit}</strong>
+              </div>
+            </div>
+            <div className="customer-gate-list">
+              {result.session.gates
+                .filter((gate) => gate.status !== 'PASS')
+                .map((gate) => (
+                  <span key={gate.gate_id}>
+                    {gate.gate_id}: {gate.status}{gate.reason_code ? ` / ${gate.reason_code}` : ''}
+                  </span>
+                ))}
+            </div>
             {result.attack_detected && (
               <div className="solution-box">
                 <h2>경고 및 솔루션</h2>
@@ -290,9 +317,13 @@ function StatCard({ label, value, tone }: { label: string; value: string; tone?:
 function TopBar({
   activeMode,
   onModeChange,
+  user,
+  onLogout,
 }: {
   activeMode: DashboardMode;
   onModeChange: (mode: DashboardMode) => void;
+  user: LoginResponse;
+  onLogout: () => void;
 }) {
   const navItems =
     activeMode === 'hc160'
@@ -343,6 +374,10 @@ function TopBar({
           </a>
         ))}
       </nav>
+      <div className="admin-session">
+        <span>{user.display_name}</span>
+        <button type="button" onClick={onLogout}>로그아웃</button>
+      </div>
     </header>
   );
 }
@@ -1525,7 +1560,7 @@ export function App() {
 
   return (
     <div className="console-shell">
-      <TopBar activeMode={activeMode} onModeChange={setActiveMode} />
+      <TopBar activeMode={activeMode} onModeChange={setActiveMode} user={currentUser} onLogout={() => setCurrentUser(null)} />
       <main className="console-main">
         {activeMode === 'attack' && <AttackDashboard data={attackData} />}
         {activeMode === 'defense' && <DefenseDashboard data={defenseData} />}
