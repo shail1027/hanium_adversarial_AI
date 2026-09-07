@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hanium-adversarial-ai.local/schemas/api/session-result.schema.json",
+  "title": "HC160 Session Result API Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "status",
+    "final_decision",
+    "created_at",
+    "completed_at",
+    "latency_ms",
+    "attempt_count",
+    "query_budget",
+    "gates",
+    "decision_provenance"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "session_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["CREATED", "RUNNING", "COMPLETED", "ERROR", "EXPIRED"]
+    },
+    "final_decision": {
+      "type": "string",
+      "enum": ["ACCEPT", "STEP_UP", "REJECT", "ERROR"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "latency_ms": { "type": ["number", "null"], "minimum": 0 },
+    "attempt_count": { "type": "integer", "minimum": 0 },
+    "query_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["used", "limit", "exceeded"],
+      "properties": {
+        "used": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 0 },
+        "exceeded": { "type": "boolean" }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate_id", "status", "role", "latency_ms", "score", "threshold", "provenance", "reason_code"],
+        "properties": {
+          "gate_id": { "type": "string" },
+          "label": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "ERROR", "TIMEOUT", "NOT_EVALUATED", "SKIPPED", "UNAVAILABLE"]
+          },
+          "role": {
+            "type": "string",
+            "enum": ["BLOCKING", "SCORING", "ESCALATION"]
+          },
+          "latency_ms": { "type": ["number", "null"], "minimum": 0 },
+          "score": { "type": ["string", "number", "null"] },
+          "threshold": { "type": ["string", "number", "null"] },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["artifact_id", "artifact_version", "model_version", "policy_version"],
+            "properties": {
+              "artifact_id": { "type": "string" },
+              "artifact_version": { "type": "string" },
+              "model_version": { "type": "string" },
+              "policy_version": { "type": "string" }
+            }
+          },
+          "reason_code": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "decision_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_version", "calibration_artifact_id", "production_model_version"],
+      "properties": {
+        "policy_version": { "type": "string" },
+        "calibration_artifact_id": { "type": "string" },
+        "production_model_version": { "type": "string" }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "audit_log_id": { "type": "string" },
+        "result_stored": { "type": "boolean" },
+        "operator_view": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -943,6 +943,199 @@ dd {
   grid-template-columns: 1fr;
 }
 
+.hc-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.75fr);
+  gap: 22px;
+  align-items: stretch;
+  margin-bottom: 22px;
+}
+
+.hc-current-session,
+.step-up-panel {
+  margin-bottom: 0;
+}
+
+.decision-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.decision-board div {
+  min-height: 92px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 13px 14px;
+}
+
+.decision-board span,
+.step-up-panel p,
+.gate-body > div span,
+.system-grid dt {
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+}
+
+.decision-board strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.05rem;
+}
+
+.hc-meta-grid {
+  margin-bottom: 0;
+}
+
+.step-up-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.step-up-panel > strong {
+  color: var(--ink);
+  font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.step-up-panel p {
+  margin: 12px 0 18px;
+  line-height: 1.6;
+}
+
+.step-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.step-actions span {
+  border-left: 2px solid var(--warning);
+  padding: 6px 0 6px 10px;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.gate-timeline {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.gate-timeline article {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 0;
+}
+
+.gate-layer {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.gate-layer strong {
+  color: var(--ink);
+  font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 1.25rem;
+}
+
+.gate-body {
+  min-width: 0;
+}
+
+.gate-body > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.gate-body > div:first-child strong {
+  color: var(--ink);
+}
+
+.gate-body dl,
+.system-grid dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.gate-body dl div,
+.system-grid dl div {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+}
+
+.provenance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.provenance-row code {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  padding: 5px 7px;
+  font-size: 0.72rem;
+}
+
+.hc-filters {
+  grid-template-columns: 1fr;
+}
+
+.hc-history-table table {
+  min-width: 1180px;
+}
+
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.system-grid article {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 14px;
+}
+
+.system-grid article > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.system-grid strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.system-grid dl {
+  grid-template-columns: 1fr;
+  border-top-color: var(--line);
+}
+
 .split-panel {
   min-width: 0;
 }
@@ -1020,6 +1213,11 @@ dd {
     grid-template-columns: 1fr;
   }
 
+  .hc-overview,
+  .system-grid {
+    grid-template-columns: 1fr;
+  }
+
   .pipeline-list article {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -1051,7 +1249,9 @@ dd {
   .family-grid,
   .filters,
   .squeezer-grid,
-  .model-summary,
+    .model-summary,
+  .decision-board,
+  .gate-body dl,
   .risk-score-guide article,
   .training-history article,
   .timeline-list li,
@@ -1061,6 +1261,10 @@ dd {
 
   .timeline-list li {
     gap: 4px;
+  }
+
+  .gate-timeline article {
+    grid-template-columns: 1fr;
   }
 
   .stat-card,

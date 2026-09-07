@@ -1,5 +1,10 @@
 export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
 export type AttackFamily = 'pgd' | 'fgsm' | 'square' | 'adaptive';
+export type HcSessionStatus = 'CREATED' | 'RUNNING' | 'COMPLETED' | 'ERROR' | 'EXPIRED';
+export type HcFinalDecision = 'ACCEPT' | 'STEP_UP' | 'REJECT' | 'ERROR';
+export type HcGateStatus = 'PASS' | 'FAIL' | 'ERROR' | 'TIMEOUT' | 'NOT_EVALUATED' | 'SKIPPED' | 'UNAVAILABLE';
+export type HcGateRole = 'BLOCKING' | 'SCORING' | 'ESCALATION';
+export type HcSystemStatus = 'OK' | 'MEASUREMENT_PENDING' | 'NOT_EVALUATED' | 'BLOCKED' | 'DEGRADED';
 
 export interface DashboardOverview {
   total_sessions: number;
@@ -172,4 +177,74 @@ export interface TrainingHistory {
     loss: number;
     asr: number;
   }>;
+}
+
+export interface HcProvenance {
+  artifact_id: string;
+  artifact_version: string;
+  model_version: string;
+  policy_version: string;
+}
+
+export interface HcGateResult {
+  gate_id: string;
+  label?: string;
+  status: HcGateStatus;
+  role: HcGateRole;
+  latency_ms: number | null;
+  score: string | number | null;
+  threshold: string | number | null;
+  provenance: HcProvenance;
+  reason_code: string | null;
+}
+
+export interface HcSessionResult {
+  schema_version: string;
+  session_id: string;
+  status: HcSessionStatus;
+  final_decision: HcFinalDecision;
+  created_at: string;
+  completed_at: string | null;
+  latency_ms: number | null;
+  attempt_count: number;
+  query_budget: {
+    used: number;
+    limit: number;
+    exceeded: boolean;
+  };
+  gates: HcGateResult[];
+  decision_provenance: {
+    policy_version: string;
+    calibration_artifact_id: string;
+    production_model_version: string;
+  };
+  audit?: {
+    audit_log_id: string;
+    result_stored: boolean;
+    operator_view: boolean;
+  };
+}
+
+export interface HcSessionSummary {
+  session_id: string;
+  created_at: string;
+  status: HcSessionStatus;
+  final_decision: HcFinalDecision;
+  latency_ms: number | null;
+  attempt_count: number;
+  step_up: boolean;
+  has_error: boolean;
+  failed_gate: string | null;
+  policy_version: string;
+  model_version: string;
+  artifact_version: string;
+}
+
+export interface HcSystemStatusRow {
+  component: string;
+  status: HcSystemStatus;
+  last_ok_at: string;
+  error_count: number;
+  latency_p50_ms: number | null;
+  latency_p95_ms: number | null;
 }

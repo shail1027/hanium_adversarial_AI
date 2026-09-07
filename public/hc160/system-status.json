@@ -1,0 +1,50 @@
+[
+  {
+    "component": "REST API",
+    "status": "OK",
+    "last_ok_at": "2026-09-07T10:01:02Z",
+    "error_count": 0,
+    "latency_p50_ms": 61,
+    "latency_p95_ms": 148
+  },
+  {
+    "component": "Authentication Engine",
+    "status": "OK",
+    "last_ok_at": "2026-09-07T10:00:58Z",
+    "error_count": 1,
+    "latency_p50_ms": 422,
+    "latency_p95_ms": 910
+  },
+  {
+    "component": "Session Store",
+    "status": "OK",
+    "last_ok_at": "2026-09-07T10:01:01Z",
+    "error_count": 0,
+    "latency_p50_ms": 18,
+    "latency_p95_ms": 47
+  },
+  {
+    "component": "Encrypted Template Store",
+    "status": "OK",
+    "last_ok_at": "2026-09-07T10:00:49Z",
+    "error_count": 0,
+    "latency_p50_ms": 33,
+    "latency_p95_ms": 86
+  },
+  {
+    "component": "Model Artifact",
+    "status": "MEASUREMENT_PENDING",
+    "last_ok_at": "2026-09-07T09:58:11Z",
+    "error_count": 0,
+    "latency_p50_ms": null,
+    "latency_p95_ms": null
+  },
+  {
+    "component": "Threshold Calibration Artifact",
+    "status": "OK",
+    "last_ok_at": "2026-09-07T09:59:40Z",
+    "error_count": 0,
+    "latency_p50_ms": 9,
+    "latency_p95_ms": 21
+  }
+]

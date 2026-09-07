@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hanium-adversarial-ai.local/schemas/api/session-summary.schema.json",
+  "title": "HC160 Session Summary API Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "created_at",
+    "status",
+    "final_decision",
+    "latency_ms",
+    "attempt_count",
+    "step_up",
+    "has_error",
+    "policy_version",
+    "model_version",
+    "artifact_version"
+  ],
+  "properties": {
+    "session_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "status": {
+      "type": "string",
+      "enum": ["CREATED", "RUNNING", "COMPLETED", "ERROR", "EXPIRED"]
+    },
+    "final_decision": {
+      "type": "string",
+      "enum": ["ACCEPT", "STEP_UP", "REJECT", "ERROR"]
+    },
+    "latency_ms": { "type": ["number", "null"], "minimum": 0 },
+    "attempt_count": { "type": "integer", "minimum": 0 },
+    "step_up": { "type": "boolean" },
+    "has_error": { "type": "boolean" },
+    "failed_gate": { "type": ["string", "null"] },
+    "policy_version": { "type": "string" },
+    "model_version": { "type": "string" },
+    "artifact_version": { "type": "string" }
+  }
+}

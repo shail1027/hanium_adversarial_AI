@@ -6,6 +6,9 @@ import type {
   DefenseEnsembleRow,
   DefenseFeatureSqueezingRow,
   DefenseHandoffRow,
+  HcSessionResult,
+  HcSessionSummary,
+  HcSystemStatusRow,
   RiskSession,
   RuleDefinitionFile,
   RuleHitSummary,
@@ -14,6 +17,7 @@ import type {
 
 const DATA_BASE = '/forensics';
 const DEFENSE_BASE = '/defense';
+const HC160_BASE = '/hc160';
 
 const defaultNumberFields = new Set([
   'sessions',
@@ -217,5 +221,19 @@ export async function loadDefenseDashboardData() {
     advTraining,
     handoff,
     trainingHistory,
+  };
+}
+
+export async function loadHc160DashboardData() {
+  const [sessionResult, sessionSummaries, systemStatus] = await Promise.all([
+    fetch(`${HC160_BASE}/session-result.json`).then((response) => response.json() as Promise<HcSessionResult>),
+    fetch(`${HC160_BASE}/session-summaries.json`).then((response) => response.json() as Promise<HcSessionSummary[]>),
+    fetch(`${HC160_BASE}/system-status.json`).then((response) => response.json() as Promise<HcSystemStatusRow[]>),
+  ]);
+
+  return {
+    sessionResult,
+    sessionSummaries,
+    systemStatus,
   };
 }

@@ -44,3 +44,13 @@ npm run build
 - `training_history.json`
 
 방어 화면은 실시간 인증 현황, 4단계 방어 파이프라인 상태, 위험도 스코어 기준, 세션별 상세 로그, Feature Squeezing 포렌식, 적대적 학습 모델 상태를 표시합니다.
+
+### HC160 Operations
+
+- `public/hc160/session-result.json`
+- `public/hc160/session-summaries.json`
+- `public/hc160/system-status.json`
+- `schemas/api/session-result.schema.json`
+- `schemas/api/session-summary.schema.json`
+
+HC160 화면은 백엔드가 계산한 세션 처리 상태와 최종 판정을 분리해 표시하고, L0~L4 gate 상태, STEP-UP 안내, 세션 이력, 시스템 상태를 운영자 관점에서 보여줍니다.

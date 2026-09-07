@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadDashboardData, loadDefenseDashboardData } from './data';
+import { loadDashboardData, loadDefenseDashboardData, loadHc160DashboardData } from './data';
 import type {
   AttackFamily,
   AttackFamilyRow,
@@ -9,6 +9,11 @@ import type {
   DefenseEnsembleRow,
   DefenseFeatureSqueezingRow,
   DefenseHandoffRow,
+  HcFinalDecision,
+  HcGateResult,
+  HcGateStatus,
+  HcSessionSummary,
+  HcSystemStatusRow,
   RiskLevel,
   RiskSession,
   RuleDefinition,
@@ -18,8 +23,10 @@ import type {
 
 type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 type DefenseDashboardData = Awaited<ReturnType<typeof loadDefenseDashboardData>>;
+type Hc160DashboardData = Awaited<ReturnType<typeof loadHc160DashboardData>>;
 type AcceptedFilter = 'all' | 'accepted' | 'rejected';
-type DashboardMode = 'attack' | 'defense';
+type DashboardMode = 'attack' | 'defense' | 'hc160';
+type HcHistoryFilter = HcFinalDecision | 'all' | 'step_up' | 'error';
 type AccountRiskRow = {
   accountId: string;
   attempts: number;
@@ -30,6 +37,24 @@ type AccountRiskRow = {
 
 const riskLevels: Array<RiskLevel | 'all'> = ['all', 'critical', 'high', 'medium', 'low'];
 const attackFamilies: Array<AttackFamily | 'all'> = ['all', 'pgd', 'fgsm', 'square', 'adaptive'];
+
+const hcHistoryFilters: HcHistoryFilter[] = ['all', 'ACCEPT', 'STEP_UP', 'REJECT', 'ERROR', 'step_up', 'error'];
+
+const gateDescriptions: Record<string, string> = {
+  L0: 'nonce, 캡처 출처, 가상 카메라, 얼굴 검출, 품질 검사 계층입니다.',
+  L1: '반복 프레임, 카메라 모션, 조명/동작 챌린지 계층입니다.',
+  L2: 'FaceNet 기반 신원 margin을 확인하는 계층입니다.',
+  L2B: '합성 이미지와 딥페이크 위험 신호를 확인하는 계층입니다.',
+  L3: '앙상블과 적대적 위험 점수를 표시하는 계층입니다. 최종 판정으로 변환하지 않습니다.',
+  L4: '시도 횟수, STEP-UP 누적, 질의 예산을 확인하는 계층입니다.',
+};
+
+const decisionLabels: Record<HcFinalDecision, string> = {
+  ACCEPT: '인증 완료',
+  STEP_UP: '추가 인증 필요',
+  REJECT: '인증 거부',
+  ERROR: '처리 오류',
+};
 
 const familyNotes: Record<AttackFamily, string> = {
   pgd: '모델 내부 정보를 알고 반복적으로 이미지를 조금씩 바꾸는 강한 공격입니다.',
@@ -105,11 +130,36 @@ function TopBar({
   activeMode: DashboardMode;
   onModeChange: (mode: DashboardMode) => void;
 }) {
+  const navItems =
+    activeMode === 'hc160'
+      ? [
+          ['#hc-overview', 'Current Session'],
+          ['#hc-gates', 'L0-L4 Gates'],
+          ['#hc-history', 'Session History'],
+          ['#hc-system', 'System Status'],
+        ]
+      : activeMode === 'defense'
+        ? [
+            ['#defense-overview', 'Overview'],
+            ['#defense-pipeline', 'Pipeline'],
+            ['#defense-sessions', 'Sessions'],
+            ['#risk-score', 'Risk Score'],
+            ['#feature-squeezing', 'Squeezing'],
+          ]
+        : [
+            ['#overview', 'Overview'],
+            ['#families', 'Attack Types'],
+            ['#sessions', 'Risk Sessions'],
+            ['#accounts', 'Accounts'],
+            ['#timeline', 'Timeline'],
+            ['#rules', 'Rules'],
+          ];
+
   return (
     <header className="top-bar">
       <div className="brand-block">
         <strong>FaceAuth</strong>
-        <small>Forensics</small>
+        <small>{activeMode === 'hc160' ? 'HC160' : 'Forensics'}</small>
       </div>
       <div className="mode-switch" aria-label="Dashboard mode">
         <button className={activeMode === 'attack' ? 'active' : ''} type="button" onClick={() => onModeChange('attack')}>
@@ -118,14 +168,16 @@ function TopBar({
         <button className={activeMode === 'defense' ? 'active' : ''} type="button" onClick={() => onModeChange('defense')}>
           Defense
         </button>
+        <button className={activeMode === 'hc160' ? 'active' : ''} type="button" onClick={() => onModeChange('hc160')}>
+          HC160
+        </button>
       </div>
       <nav className="top-nav" aria-label="Dashboard sections">
-        <a href="#overview" className="active">Overview</a>
-        <a href="#families">Attack Types</a>
-        <a href="#sessions">Risk Sessions</a>
-        <a href="#accounts">Accounts</a>
-        <a href="#timeline">Timeline</a>
-        <a href="#rules">Rules</a>
+        {navItems.map(([href, label], index) => (
+          <a href={href} className={index === 0 ? 'active' : ''} key={href}>
+            {label}
+          </a>
+        ))}
       </nav>
     </header>
   );
@@ -774,6 +826,311 @@ function DefenseDashboard({ data }: { data: DefenseDashboardData }) {
   );
 }
 
+function decisionTone(decision: HcFinalDecision) {
+  if (decision === 'ACCEPT') {
+    return 'risk-low';
+  }
+  if (decision === 'STEP_UP') {
+    return 'risk-high';
+  }
+  return 'risk-critical';
+}
+
+function gateTone(status: HcGateStatus) {
+  if (status === 'PASS') {
+    return 'risk-low';
+  }
+  if (status === 'FAIL' || status === 'TIMEOUT') {
+    return 'risk-critical';
+  }
+  if (status === 'ERROR' || status === 'UNAVAILABLE') {
+    return 'risk-high';
+  }
+  return 'risk-medium';
+}
+
+function gateLayer(gateId: string) {
+  if (gateId.startsWith('L2B')) {
+    return 'L2B';
+  }
+  return gateId.split('_')[0] ?? gateId;
+}
+
+function Hc160Overview({ data }: { data: Hc160DashboardData }) {
+  const { sessionResult } = data;
+  const remaining = Math.max(sessionResult.query_budget.limit - sessionResult.query_budget.used, 0);
+
+  return (
+    <section className="hc-overview" id="hc-overview">
+      <article className="panel hc-current-session">
+        <div className="section-heading">
+          <div>
+            <p>Current Session</p>
+            <h2>{sessionResult.session_id}</h2>
+          </div>
+          <span className={`pill ${decisionTone(sessionResult.final_decision)}`}>{sessionResult.final_decision}</span>
+        </div>
+        <div className="decision-board">
+          <div>
+            <span>처리 상태</span>
+            <strong>{sessionResult.status}</strong>
+          </div>
+          <div>
+            <span>최종 판정</span>
+            <strong>{decisionLabels[sessionResult.final_decision]}</strong>
+          </div>
+          <div>
+            <span>전체 처리 시간</span>
+            <strong>{formatNumber(sessionResult.latency_ms)}ms</strong>
+          </div>
+          <div>
+            <span>시도 / 남은 예산</span>
+            <strong>{sessionResult.attempt_count}회 / {remaining}회</strong>
+          </div>
+        </div>
+        <dl className="detail-grid hc-meta-grid">
+          <div>
+            <dt>Created At</dt>
+            <dd>{formatDateTime(sessionResult.created_at)}</dd>
+          </div>
+          <div>
+            <dt>Completed At</dt>
+            <dd>{formatDateTime(sessionResult.completed_at ?? '')}</dd>
+          </div>
+          <div>
+            <dt>Policy Version</dt>
+            <dd>{sessionResult.decision_provenance.policy_version}</dd>
+          </div>
+          <div>
+            <dt>Calibration Artifact</dt>
+            <dd>{sessionResult.decision_provenance.calibration_artifact_id}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article className="panel step-up-panel">
+        <div className="section-heading">
+          <div>
+            <p>Step-up</p>
+            <h2>추가 인증 상태</h2>
+          </div>
+          <span>{sessionResult.query_budget.exceeded ? 'Budget exceeded' : `${remaining} attempts left`}</span>
+        </div>
+        {sessionResult.final_decision === 'STEP_UP' ? (
+          <>
+            <strong>백엔드 판정에 따라 추가 인증이 필요합니다.</strong>
+            <p>대체 인증 수단을 제시하고, 남은 시도 횟수 안에서 다음 단계를 진행합니다.</p>
+            <div className="step-actions" aria-label="Available step-up methods">
+              <span>OTP</span>
+              <span>ARS</span>
+              <span>계좌 비밀번호 재확인</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <strong>{decisionLabels[sessionResult.final_decision]}</strong>
+            <p>현재 응답의 최종 판정을 그대로 표시합니다.</p>
+          </>
+        )}
+      </article>
+    </section>
+  );
+}
+
+function GateTimeline({ gates }: { gates: HcGateResult[] }) {
+  return (
+    <section className="panel" id="hc-gates">
+      <div className="section-heading">
+        <div>
+          <p>Layered Defense</p>
+          <h2>L0~L4 계층별 방어 상태</h2>
+        </div>
+        <span>backend result only</span>
+      </div>
+      <div className="gate-timeline">
+        {gates.map((gate) => {
+          const layer = gateLayer(gate.gate_id);
+          return (
+            <article key={gate.gate_id}>
+              <div className="gate-layer">
+                <strong>{layer}</strong>
+                <InfoTooltip text={gateDescriptions[layer] ?? '백엔드가 반환한 gate 결과입니다.'} />
+              </div>
+              <div className="gate-body">
+                <div>
+                  <strong>{gate.label ?? gate.gate_id}</strong>
+                  <span>{gate.gate_id}</span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Status</dt>
+                    <dd><span className={`pill ${gateTone(gate.status)}`}>{gate.status}</span></dd>
+                  </div>
+                  <div>
+                    <dt>Role</dt>
+                    <dd>{gate.role}</dd>
+                  </div>
+                  <div>
+                    <dt>Latency</dt>
+                    <dd>{gate.latency_ms === null ? 'UNAVAILABLE' : `${formatNumber(gate.latency_ms)}ms`}</dd>
+                  </div>
+                  <div>
+                    <dt>Reason</dt>
+                    <dd>{gate.reason_code ?? '-'}</dd>
+                  </div>
+                </dl>
+                <div className="provenance-row">
+                  <code>{gate.provenance.artifact_id}</code>
+                  <code>{gate.provenance.model_version}</code>
+                  <code>{gate.provenance.policy_version}</code>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function Hc160History({ rows }: { rows: HcSessionSummary[] }) {
+  const [filter, setFilter] = useState<HcHistoryFilter>('all');
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) => {
+        if (filter === 'all') {
+          return true;
+        }
+        if (filter === 'step_up') {
+          return row.step_up;
+        }
+        if (filter === 'error') {
+          return row.has_error;
+        }
+        return row.final_decision === filter;
+      }),
+    [filter, rows],
+  );
+
+  return (
+    <section className="panel" id="hc-history">
+      <div className="section-heading">
+        <div>
+          <p>Session History</p>
+          <h2>세션 이력 및 감사 요약</h2>
+        </div>
+        <span>{formatNumber(filteredRows.length)} rows</span>
+      </div>
+      <div className="filters hc-filters">
+        <div>
+          <span>final_decision / event</span>
+          {hcHistoryFilters.map((value) => (
+            <FilterButton key={value} value={value} active={filter === value} onClick={setFilter} />
+          ))}
+        </div>
+      </div>
+      <div className="table-wrap hc-history-table">
+        <table>
+          <thead>
+            <tr>
+              <th>created_at</th>
+              <th>session_id</th>
+              <th>status</th>
+              <th>final_decision</th>
+              <th>latency</th>
+              <th>attempts</th>
+              <th>step_up</th>
+              <th>error</th>
+              <th>failed_gate</th>
+              <th>policy/model/artifact</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.map((row) => (
+              <tr key={row.session_id}>
+                <td>{formatDateTime(row.created_at)}</td>
+                <td>{row.session_id}</td>
+                <td>{row.status}</td>
+                <td><span className={`pill ${decisionTone(row.final_decision)}`}>{row.final_decision}</span></td>
+                <td>{formatNumber(row.latency_ms)}ms</td>
+                <td>{row.attempt_count}</td>
+                <td>{row.step_up ? 'true' : 'false'}</td>
+                <td>{row.has_error ? 'true' : 'false'}</td>
+                <td>{row.failed_gate ?? '-'}</td>
+                <td>{row.policy_version} / {row.model_version} / {row.artifact_version}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function SystemStatusPanel({ rows }: { rows: HcSystemStatusRow[] }) {
+  return (
+    <section className="panel" id="hc-system">
+      <div className="section-heading">
+        <div>
+          <p>System Status</p>
+          <h2>시스템 상태</h2>
+        </div>
+      </div>
+      <div className="system-grid">
+        {rows.map((row) => (
+          <article key={row.component}>
+            <div>
+              <strong>{row.component}</strong>
+              <span className={`pill ${row.status === 'OK' ? 'risk-low' : 'risk-high'}`}>{row.status}</span>
+            </div>
+            <dl>
+              <div>
+                <dt>Last OK</dt>
+                <dd>{formatDateTime(row.last_ok_at)}</dd>
+              </div>
+              <div>
+                <dt>Errors</dt>
+                <dd>{row.error_count}</dd>
+              </div>
+              <div>
+                <dt>P50 / P95</dt>
+                <dd>
+                  {row.latency_p50_ms === null ? 'MEASUREMENT_PENDING' : `${row.latency_p50_ms}ms / ${row.latency_p95_ms}ms`}
+                </dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Hc160Dashboard({ data }: { data: Hc160DashboardData }) {
+  return (
+    <>
+      <header className="app-header">
+        <div>
+          <p>HC160 Operations</p>
+          <h1>Session Result Dashboard</h1>
+          <span className="header-description">
+            백엔드가 계산한 인증 결과와 L0~L4 계층 상태를 운영자 화면에서 안전하게 표시합니다.
+          </span>
+        </div>
+        <div className="header-meta">
+          <span className="status-dot">API contract mock</span>
+          <span>schema {data.sessionResult.schema_version}</span>
+          <span>No client-side decision</span>
+        </div>
+      </header>
+      <Hc160Overview data={data} />
+      <GateTimeline gates={data.sessionResult.gates} />
+      <Hc160History rows={data.sessionSummaries} />
+      <SystemStatusPanel rows={data.systemStatus} />
+    </>
+  );
+}
+
 function RuleStatistics({
   summary,
   rulesById,
@@ -971,14 +1328,16 @@ function AttackDashboard({ data }: { data: DashboardData }) {
 export function App() {
   const [attackData, setAttackData] = useState<DashboardData | null>(null);
   const [defenseData, setDefenseData] = useState<DefenseDashboardData | null>(null);
+  const [hc160Data, setHc160Data] = useState<Hc160DashboardData | null>(null);
   const [activeMode, setActiveMode] = useState<DashboardMode>('attack');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([loadDashboardData(), loadDefenseDashboardData()])
-      .then(([attack, defense]) => {
+    Promise.all([loadDashboardData(), loadDefenseDashboardData(), loadHc160DashboardData()])
+      .then(([attack, defense, hc160]) => {
         setAttackData(attack);
         setDefenseData(defense);
+        setHc160Data(hc160);
       })
       .catch((error: Error) => setError(error.message));
   }, []);
@@ -987,7 +1346,7 @@ export function App() {
     return <div className="state-message">데이터 로드 실패: {error}</div>;
   }
 
-  if (!attackData || !defenseData) {
+  if (!attackData || !defenseData || !hc160Data) {
     return <div className="state-message">대시보드 데이터를 불러오는 중입니다.</div>;
   }
 
@@ -995,7 +1354,9 @@ export function App() {
     <div className="console-shell">
       <TopBar activeMode={activeMode} onModeChange={setActiveMode} />
       <main className="console-main">
-        {activeMode === 'attack' ? <AttackDashboard data={attackData} /> : <DefenseDashboard data={defenseData} />}
+        {activeMode === 'attack' && <AttackDashboard data={attackData} />}
+        {activeMode === 'defense' && <DefenseDashboard data={defenseData} />}
+        {activeMode === 'hc160' && <Hc160Dashboard data={hc160Data} />}
       </main>
     </div>
   );
