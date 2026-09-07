@@ -182,15 +182,24 @@ function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () =
             {started ? '세션 다시 시작' : '데모 인증 세션 시작'}
           </button>
           {started && (
+            <button type="button" onClick={() => handleVerify('normal')} disabled={isWorking}>
+              데모 영상 인증 실행
+            </button>
+          )}
+        </div>
+
+        {started && (
+          <details className="scenario-panel">
+            <summary>시연 시나리오</summary>
             <div>
-              {(Object.keys(scenarioLabels) as DemoScenario[]).map((scenario) => (
+              {(['attack', 'quality_fail', 'timeout'] as DemoScenario[]).map((scenario) => (
                 <button type="button" key={scenario} onClick={() => handleVerify(scenario)} disabled={isWorking}>
                   {scenarioLabels[scenario]}
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </details>
+        )}
 
         {message && <p className="form-message">{message}</p>}
 
