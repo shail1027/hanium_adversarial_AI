@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
+from backend.app.model_adapter import ModelCliConfig
 
 
 client = TestClient(app)
@@ -102,3 +103,18 @@ def test_dashboard_static_file_rejects_unknown_dataset():
     response = client.get("/api/dashboard/static/private/secrets.json")
 
     assert response.status_code == 404
+
+
+def test_handoff_dir_supplies_demo_defaults(monkeypatch):
+    monkeypatch.setenv("HC160_HANDOFF_DIR", "/tmp/handoff")
+    monkeypatch.setenv("HC160_REPO_PATH", "/tmp/hc160")
+    monkeypatch.setenv("HC160_DEMO_USER_ID", "api-demo-user")
+
+    config = ModelCliConfig.from_env()
+
+    assert config.template_path == "/tmp/handoff/api-demo-user.enc.json"
+    assert config.video_path == "/tmp/handoff/api-demo-genuine.mp4"
+    assert config.template_audit_log == "/tmp/handoff/api-demo-audit.jsonl"
+    assert config.demo_user_id == "api-demo-user"
+    assert config.threshold == 0.60
+    assert config.threshold_version == "demo-smoke-v1"

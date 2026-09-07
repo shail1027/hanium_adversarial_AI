@@ -29,10 +29,22 @@ backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0
 export HC160_REPO_PATH=/path/to/26_HC160
 export HC160_PYTHON_PATH=/path/to/python
 export HC160_TEMPLATE_PATH=/path/to/template.enc
+export HC160_DEMO_USER_ID=api-demo-user
 export HC160_THRESHOLD=0.73
 export HC160_THRESHOLD_VERSION=threshold-v1
 export HC160_DEMO_VIDEO_PATH=/path/to/demo-auth-video.mp4
 export HC160_TEMPLATE_KEYS='{"local-key-id":"base64-encoded-32-byte-key"}'
+```
+
+모델팀 handoff 폴더가 `HC160_DASHBOARD_HANDOFF_2026-09-08` 형태로 전달된 경우에는 아래처럼 줄여서 설정할 수 있다.
+
+```bash
+export HC160_REPO_PATH=/path/to/26_HC160
+export HC160_PYTHON_PATH=/path/to/python
+export HC160_HANDOFF_DIR=/path/to/HC160_DASHBOARD_HANDOFF_2026-09-08
+export HC160_DEMO_USER_ID=api-demo-user
+export HC160_TEMPLATE_KEYS='{"api-demo-v1":"base64-encoded-32-byte-key"}'
+export HC160_MIN_BLUR_VARIANCE=10
 ```
 
 선택값:
@@ -42,6 +54,9 @@ export HC160_PROFILE=BASELINE_ONLY
 export HC160_TEMPLATE_AUDIT_LOG=template-audit.jsonl
 export HC160_FRAMES=20
 export HC160_MIN_VALID_FRAMES=5
+export HC160_MIN_BLUR_VARIANCE=40
+export HC160_MIN_BRIGHTNESS=35
+export HC160_MAX_BRIGHTNESS=220
 export HC160_DEVICE=cpu
 ```
 
