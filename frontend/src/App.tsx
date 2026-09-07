@@ -83,9 +83,9 @@ function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
     <main className="login-shell">
       <section className="login-panel">
         <div>
-          <p>FaceAuth Demo</p>
-          <h1>금융 얼굴인증 시연</h1>
-          <span>일반 사용자는 얼굴인증 플로우로, 관리자는 운영 대시보드로 진입합니다.</span>
+          <p>Veriface Demo</p>
+          <h1>Veriface 얼굴인증 시연</h1>
+          <span>일반 사용자는 인증 플로우로, 관리자는 Veriface 운영 대시보드로 진입합니다.</span>
         </div>
         <form onSubmit={handleSubmit}>
           <label>
@@ -158,7 +158,7 @@ function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () =
       <section className="panel user-card face-auth-card">
         <div className="section-heading">
           <div>
-            <p>Customer FaceAuth</p>
+            <p>Veriface User Auth</p>
             <h1>{user.display_name}</h1>
             <span className="header-description">현재 정상 인증은 모델팀이 전달한 데모 영상으로 HC160 CLI를 실행합니다.</span>
           </div>
@@ -366,7 +366,7 @@ function TopBar({
   return (
     <header className="top-bar">
       <div className="brand-block">
-        <strong>FaceAuth</strong>
+        <strong>Veriface</strong>
         <small>{activeMode === 'hc160' ? 'HC160' : 'Forensics'}</small>
       </div>
       <div className="mode-switch" aria-label="Dashboard mode">
@@ -1014,8 +1014,8 @@ function DefenseDashboard({ data }: { data: DefenseDashboardData }) {
     <>
       <header className="app-header">
         <div>
-          <p>Financial FaceAuth Defense</p>
-          <h1>Defense Pipeline</h1>
+          <p>Veriface Defense Operations</p>
+          <h1>Defense Dashboard</h1>
           <span className="header-description">4단계 방어 파이프라인의 차단 성능, 위험도, 포렌식 탐지 근거를 점검합니다.</span>
         </div>
         <div className="header-meta">
@@ -1323,7 +1323,7 @@ function Hc160Dashboard({ data }: { data: Hc160DashboardData }) {
     <>
       <header className="app-header">
         <div>
-          <p>HC160 Operations</p>
+          <p>Veriface HC160 Operations</p>
           <h1>Session Result Dashboard</h1>
           <span className="header-description">
             백엔드가 계산한 인증 결과와 L0~L4 계층 상태를 운영자 화면에서 안전하게 표시합니다.
@@ -1472,8 +1472,8 @@ function AttackDashboard({ data }: { data: DashboardData }) {
     <>
         <header className="app-header">
           <div>
-            <p>Financial FaceAuth Operations</p>
-            <h1>Attack Forensics</h1>
+            <p>Veriface Security Operations</p>
+            <h1>Attack Forensics Dashboard</h1>
             <span className="header-description">공격 세션의 성공 여부, 위험도, 탐지 룰 근거를 운영 관점에서 점검합니다.</span>
           </div>
           <div className="header-meta">

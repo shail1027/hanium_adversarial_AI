@@ -1,6 +1,6 @@
-# Backend
+# Veriface Backend
 
-FastAPI 서버는 시연영상용 얼굴인증 API와 관리자 대시보드 API를 제공한다.
+FastAPI 서버는 Veriface 시연영상용 얼굴인증 API와 관리자 대시보드 API를 제공한다.
 
 ## Run
 

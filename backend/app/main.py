@@ -9,11 +9,18 @@ from .models import FaceAuthStartRequest, FaceAuthVerifyRequest, LoginRequest
 from .services import DashboardService, DemoAuthService, DemoFaceAuthService
 
 
-app = FastAPI(title="Hanium Adversarial AI Demo API", version="0.2.0")
+app = FastAPI(title="Veriface Demo API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://localhost:5173", "http://localhost:5174"],
+    allow_origins=[
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,7 +36,7 @@ dashboard_service = DashboardService()
 def health():
     return {
         "status": "ok",
-        "service": "faceauth-demo-api",
+        "service": "veriface-demo-api",
         "hc160_cli_ready": model_adapter.ready(),
         "hc160_cli_missing": model_adapter.missing_requirements(),
     }

@@ -1,4 +1,4 @@
-# FaceAuth Demo Scenario
+# Veriface Demo Scenario
 
 ## 1. 일반 사용자 정상 인증
 
@@ -15,7 +15,7 @@
 4. 화면에 `STEP_UP`이 표시된다.
 5. 경고 및 솔루션 패널에 OTP, 카메라 재정렬, 고객센터 연결 안내가 표시된다.
 
-## 3. 관리자 대시보드
+## 3. Veriface 관리자 대시보드
 
 1. 로그인 화면에서 `admin` 계정으로 로그인한다.
 2. 관리자 화면에서 `Attack`, `Defense`, `HC160` 탭을 전환한다.

@@ -1,6 +1,6 @@
-# Hanium Adversarial AI Dashboard
+# Veriface Dashboard
 
-금융 얼굴인증 시연 플로우와 공격 포렌식·방어 파이프라인 결과를 확인하기 위한 fullstack 데모입니다.
+금융 얼굴인증 시연 플로우와 공격 포렌식·방어 파이프라인 결과를 확인하기 위한 Veriface fullstack 데모입니다.
 
 ## Branch Strategy
 

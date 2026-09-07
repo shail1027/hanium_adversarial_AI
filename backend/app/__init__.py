@@ -1,1 +1,1 @@
-"""FastAPI backend package for the FaceAuth demo."""
+"""FastAPI backend package for the Veriface demo."""
