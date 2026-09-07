@@ -4,9 +4,9 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
+    "dev": "npm --prefix frontend run dev -- --host 127.0.0.1",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
-    "backend": "python3 -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000"
+    "backend": "backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8001"
   }
 }

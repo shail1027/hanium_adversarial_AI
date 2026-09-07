@@ -7,7 +7,7 @@ FastAPI 서버는 시연영상용 얼굴인증 API와 관리자 대시보드 API
 ```bash
 python3 -m venv backend/.venv
 backend/.venv/bin/python -m pip install -r backend/requirements.txt
-backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8001
 ```
 
 ## API
