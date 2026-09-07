@@ -11,9 +11,17 @@
 
 ```bash
 npm --prefix frontend install
-npm run dev
 python3 -m pip install -r backend/requirements.txt
 npm run backend
+npm run dev
+```
+
+로컬 Python이 externally managed environment이면 가상환경을 사용합니다.
+
+```bash
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements.txt
+backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ## Build
@@ -32,6 +40,10 @@ npm run build
 ## Demo Scenario
 
 시연 흐름은 [docs/demo-scenario.md](docs/demo-scenario.md)에 정리되어 있습니다.
+
+## Model Repository Integration
+
+[Yaho03/26_HC160](https://github.com/Yaho03/26_HC160)에는 인증 CLI와 내부 세션/정책 모듈이 있으며, 현재 확인된 기준으로 별도 REST API 서버는 없습니다. 이 저장소의 FastAPI 서버는 fixture 응답으로 시연 플로우를 안정적으로 제공하고, 실제 모델 CLI 연동은 `backend/app/model_adapter.py`에서 교체하도록 분리했습니다.
 
 ## Data
 
