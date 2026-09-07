@@ -113,7 +113,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
 type DemoScenario = 'normal' | 'attack' | 'quality_fail' | 'timeout';
 
 const scenarioLabels: Record<DemoScenario, string> = {
-  normal: '정상 인증',
+  normal: '데모 영상 인증',
   attack: '공격 탐지',
   quality_fail: '품질 실패',
   timeout: '타임아웃',
@@ -160,22 +160,26 @@ function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () =
           <div>
             <p>Customer FaceAuth</p>
             <h1>{user.display_name}</h1>
-            <span className="header-description">얼굴인증 결과는 FastAPI 서버가 반환한 값을 그대로 표시합니다.</span>
+            <span className="header-description">현재 정상 인증은 모델팀이 전달한 데모 영상으로 HC160 CLI를 실행합니다.</span>
           </div>
           <button type="button" onClick={onLogout}>로그아웃</button>
         </div>
 
-        <div className="camera-preview" aria-label="Face authentication preview">
+        <div className="camera-preview" aria-label="Demo video authentication status">
           <div>
             <span />
-            <strong>{started ? '인증 세션 진행 중' : '얼굴인증 대기'}</strong>
-            <p>{started?.challenge ?? '시작 버튼을 눌러 인증 세션을 생성하세요.'}</p>
+            <strong>{isWorking ? '데모 영상 기반 인증 실행 중' : started ? '데모 인증 세션 준비됨' : '얼굴인증 시연 대기'}</strong>
+            <p>
+              {isWorking
+                ? 'FastAPI가 HC160 CLI에 demo video를 전달해 실제 모델 판정을 요청하고 있습니다.'
+                : started?.challenge ?? '시작 버튼을 눌러 인증 세션을 생성하세요. 브라우저 카메라는 아직 사용하지 않습니다.'}
+            </p>
           </div>
         </div>
 
         <div className="auth-actions">
           <button type="button" onClick={handleStart} disabled={isWorking}>
-            {started ? '세션 다시 시작' : '얼굴인증 시작'}
+            {started ? '세션 다시 시작' : '데모 인증 세션 시작'}
           </button>
           {started && (
             <div>
