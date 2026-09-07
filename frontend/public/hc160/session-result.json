@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.0",
+  "session_id": "sess_9f4a2c****",
+  "status": "COMPLETED",
+  "final_decision": "STEP_UP",
+  "created_at": "2026-09-07T10:00:00Z",
+  "completed_at": "2026-09-07T10:00:01Z",
+  "latency_ms": 842,
+  "attempt_count": 2,
+  "query_budget": {
+    "used": 2,
+    "limit": 3,
+    "exceeded": false
+  },
+  "gates": [
+    {
+      "gate_id": "L0_CAPTURE_INTEGRITY",
+      "label": "L0 Capture Integrity",
+      "status": "PASS",
+      "role": "BLOCKING",
+      "latency_ms": 92,
+      "score": null,
+      "threshold": null,
+      "provenance": {
+        "artifact_id": "capture-policy-2026-09",
+        "artifact_version": "1.0",
+        "model_version": "camera-binding-v1",
+        "policy_version": "policy-v2"
+      },
+      "reason_code": null
+    },
+    {
+      "gate_id": "L1_ILLUMINATION",
+      "label": "L1 Illumination Challenge",
+      "status": "PASS",
+      "role": "BLOCKING",
+      "latency_ms": 131,
+      "score": null,
+      "threshold": null,
+      "provenance": {
+        "artifact_id": "illumination-challenge-app01",
+        "artifact_version": "1.2",
+        "model_version": "liveness-v4",
+        "policy_version": "policy-v2"
+      },
+      "reason_code": null
+    },
+    {
+      "gate_id": "L2_FACENET_MARGIN",
+      "label": "L2 FaceNet Identity Margin",
+      "status": "PASS",
+      "role": "SCORING",
+      "latency_ms": 188,
+      "score": "SAFE_RANGE",
+      "threshold": "CALIBRATED",
+      "provenance": {
+        "artifact_id": "calibration-v206-202609",
+        "artifact_version": "2.0",
+        "model_version": "facenet-prod-2026-08",
+        "policy_version": "policy-v2"
+      },
+      "reason_code": null
+    },
+    {
+      "gate_id": "L2B_SYNTHETIC_RISK",
+      "label": "L2b Synthetic Risk",
+      "status": "NOT_EVALUATED",
+      "role": "SCORING",
+      "latency_ms": null,
+      "score": null,
+      "threshold": null,
+      "provenance": {
+        "artifact_id": "shadow-artifact-v211",
+        "artifact_version": "0.9",
+        "model_version": "UNAVAILABLE",
+        "policy_version": "policy-v2"
+      },
+      "reason_code": "SHADOW_RESULT_PENDING"
+    },
+    {
+      "gate_id": "L3_ENSEMBLE_ADV_RISK",
+      "label": "L3 Ensemble Adversarial Risk",
+      "status": "FAIL",
+      "role": "ESCALATION",
+      "latency_ms": 244,
+      "score": "HIGH_RISK_BAND",
+      "threshold": "POLICY_MANAGED",
+      "provenance": {
+        "artifact_id": "ensemble-v212-202609",
+        "artifact_version": "1.1",
+        "model_version": "ensemble-risk-v3",
+        "policy_version": "policy-v2"
+      },
+      "reason_code": "L3_HIGH_ADV_RISK"
+    },
+    {
+      "gate_id": "L4_QUERY_BUDGET",
+      "label": "L4 Query Budget",
+      "status": "PASS",
+      "role": "BLOCKING",
+      "latency_ms": 37,
+      "score": null,
+      "threshold": null,
+      "provenance": {
+        "artifact_id": "query-budget-policy",
+        "artifact_version": "1.0",
+        "model_version": "policy-runtime",
+        "policy_version": "policy-v2"
+      },
+      "reason_code": null
+    }
+  ],
+  "decision_provenance": {
+    "policy_version": "policy-v2",
+    "calibration_artifact_id": "calibration-v206-202609",
+    "production_model_version": "facenet-prod-2026-08"
+  },
+  "audit": {
+    "audit_log_id": "audit_4c1d****",
+    "result_stored": true,
+    "operator_view": true
+  }
+}
