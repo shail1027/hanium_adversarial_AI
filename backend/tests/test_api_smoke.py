@@ -118,3 +118,11 @@ def test_handoff_dir_supplies_demo_defaults(monkeypatch):
     assert config.demo_user_id == "api-demo-user"
     assert config.threshold == 0.60
     assert config.threshold_version == "demo-smoke-v1"
+
+
+def test_torch_home_can_use_hc160_specific_env(monkeypatch):
+    monkeypatch.setenv("HC160_TORCH_HOME", "/tmp/torch-cache")
+
+    config = ModelCliConfig.from_env()
+
+    assert config.torch_home == "/tmp/torch-cache"

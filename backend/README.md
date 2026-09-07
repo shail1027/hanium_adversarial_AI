@@ -45,6 +45,7 @@ export HC160_HANDOFF_DIR=/path/to/HC160_DASHBOARD_HANDOFF_2026-09-08
 export HC160_DEMO_USER_ID=api-demo-user
 export HC160_TEMPLATE_KEYS='{"api-demo-v1":"base64-encoded-32-byte-key"}'
 export HC160_MIN_BLUR_VARIANCE=10
+export HC160_TORCH_HOME=/private/tmp/torch-cache
 ```
 
 선택값:
@@ -58,6 +59,7 @@ export HC160_MIN_BLUR_VARIANCE=40
 export HC160_MIN_BRIGHTNESS=35
 export HC160_MAX_BRIGHTNESS=220
 export HC160_DEVICE=cpu
+export HC160_TORCH_HOME=/private/tmp/torch-cache
 ```
 
 환경변수나 실행 아티팩트가 없으면 서버는 fixture 응답으로 fallback한다. `GET /api/health`는 `hc160_cli_ready`와 `hc160_cli_missing`을 반환하므로 현재 실제 CLI 판정이 가능한 상태인지 바로 확인할 수 있다.

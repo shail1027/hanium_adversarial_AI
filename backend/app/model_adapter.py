@@ -24,6 +24,7 @@ class ModelCliConfig:
     min_brightness: float = 35.0
     max_brightness: float = 220.0
     device: str | None = None
+    torch_home: str | None = None
 
     @classmethod
     def from_env(cls) -> "ModelCliConfig":
@@ -50,6 +51,7 @@ class ModelCliConfig:
             min_brightness=float(os.environ.get("HC160_MIN_BRIGHTNESS", "35")),
             max_brightness=float(os.environ.get("HC160_MAX_BRIGHTNESS", "220")),
             device=os.environ.get("HC160_DEVICE"),
+            torch_home=os.environ.get("HC160_TORCH_HOME") or os.environ.get("TORCH_HOME"),
         )
 
 
@@ -136,12 +138,16 @@ class ModelCliAdapter:
         if not repo_path.exists():
             raise RuntimeError(f"HC160 model repository does not exist: {repo_path}")
         command = [self.config.python_path, "-m", "src.face_auth.cli", "authenticate", *args]
+        env = os.environ.copy()
+        if self.config.torch_home:
+            env["TORCH_HOME"] = self.config.torch_home
         completed = subprocess.run(
             command,
             cwd=repo_path,
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         )
         return json.loads(completed.stdout)
 
