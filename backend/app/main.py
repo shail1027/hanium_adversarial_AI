@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from .model_adapter import ModelCliAdapter, ModelCliConfig
 from .models import FaceAuthStartRequest, FaceAuthVerifyRequest, LoginRequest
 from .services import DashboardService, DemoAuthService, DemoFaceAuthService
 
@@ -19,13 +20,19 @@ app.add_middleware(
 )
 
 auth_service = DemoAuthService()
-face_auth_service = DemoFaceAuthService()
+model_adapter = ModelCliAdapter(ModelCliConfig.from_env())
+face_auth_service = DemoFaceAuthService(model_adapter)
 dashboard_service = DashboardService()
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "faceauth-demo-api"}
+    return {
+        "status": "ok",
+        "service": "faceauth-demo-api",
+        "hc160_cli_ready": model_adapter.ready(),
+        "hc160_cli_missing": model_adapter.missing_requirements(),
+    }
 
 
 @app.post("/api/auth/login")

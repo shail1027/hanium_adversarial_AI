@@ -11,6 +11,8 @@ def test_health_check():
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.json()["hc160_cli_ready"] is False
+    assert "HC160_TEMPLATE_PATH" in response.json()["hc160_cli_missing"]
 
 
 def test_admin_login_role():
@@ -54,6 +56,7 @@ def test_normal_face_auth_accepts():
     assert response.status_code == 200
     assert body["session"]["final_decision"] == "ACCEPT"
     assert body["next_action"] == "continue"
+    assert body["session"]["audit"]["model_source"] == "fixture"
 
 
 def test_quality_failure_rejects_without_attack_warning():

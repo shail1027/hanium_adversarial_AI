@@ -43,7 +43,7 @@ npm run build
 
 ## Model Repository Integration
 
-[Yaho03/26_HC160](https://github.com/Yaho03/26_HC160)에는 인증 CLI와 내부 세션/정책 모듈이 있으며, 현재 확인된 기준으로 별도 REST API 서버는 없습니다. 이 저장소의 FastAPI 서버는 fixture 응답으로 시연 플로우를 안정적으로 제공하고, 실제 모델 CLI 연동은 `backend/app/model_adapter.py`에서 교체하도록 분리했습니다.
+[Yaho03/26_HC160](https://github.com/Yaho03/26_HC160)에는 인증 CLI와 내부 세션/정책 모듈이 있으며, 현재 확인된 기준으로 별도 REST API 서버는 없습니다. 이 저장소의 FastAPI 서버는 `backend/app/model_adapter.py`에서 HC160 CLI를 호출할 수 있게 연결되어 있고, 필수 환경변수와 모델 아티팩트가 없으면 fixture 응답으로 fallback합니다. 실제 CLI 연동에 필요한 설정값은 [backend/README.md](backend/README.md)에 정리되어 있습니다.
 
 ## Data
 
