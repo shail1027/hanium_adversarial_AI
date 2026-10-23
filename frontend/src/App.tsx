@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { loadDashboardData, loadDefenseDashboardData, loadHc160DashboardData } from './data';
-import { login, startFaceAuth, verifyFaceAuth } from './api';
-import type { FaceAuthStartResponse, FaceAuthVerifyResponse, LoginResponse } from './api';
+import { login, getFaceContext, startFaceAuth, presentFaceChallenge, sendFaceFrame, verifyFaceAuth, consumeFaceToken, cancelFaceSession } from './api';
+import { captureFrames, captureScheduleOrigin, isConsumableResult, waitForPaint } from './faceCapture';
+import type { FaceAuthStartResponse, FaceAuthVerifyResponse, FaceContext, LoginResponse } from './api';
 import type {
   AttackFamily,
   AttackFamilyRow,
@@ -85,7 +86,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
         <div>
           <p>Veriface Demo</p>
           <h1>Veriface 얼굴인증 시연</h1>
-          <span>일반 사용자는 인증 플로우로, 관리자는 Veriface 운영 대시보드로 진입합니다.</span>
+          <span>비밀번호를 검증하지 않는 화면 시연입니다. 사용자·관리자 선택은 계정 로그인이나 관리자 권한을 부여하지 않습니다.</span>
         </div>
         <form onSubmit={handleSubmit}>
           <label>
@@ -98,7 +99,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
           </label>
           {message && <p className="form-message">{message}</p>}
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? '로그인 중' : '로그인'}
+            {isSubmitting ? '화면 여는 중' : '시연 화면 열기'}
           </button>
         </form>
         <div className="demo-accounts">
@@ -110,149 +111,141 @@ function LoginScreen({ onLogin }: { onLogin: (user: LoginResponse) => void }) {
   );
 }
 
-type DemoScenario = 'normal' | 'attack' | 'quality_fail' | 'timeout';
-
-const scenarioLabels: Record<DemoScenario, string> = {
-  normal: '데모 영상 인증',
-  attack: '공격 탐지',
-  quality_fail: '품질 실패',
-  timeout: '타임아웃',
-};
-
 function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () => void }) {
+  const [context, setContext] = useState<FaceContext | null>(null);
   const [started, setStarted] = useState<FaceAuthStartResponse | null>(null);
   const [result, setResult] = useState<FaceAuthVerifyResponse | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [biometricPassed, setBiometricPassed] = useState(false);
+  const [illumination, setIllumination] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const active = useRef<{ controller: AbortController; stream?: MediaStream; session?: FaceAuthStartResponse; csrf: string } | null>(null);
 
-  async function handleStart() {
+  function stopCapture() {
+    const attempt = active.current;
+    if (!attempt) return;
+    active.current = null;
+    attempt.controller.abort();
+    attempt.stream?.getTracks().forEach((track) => track.stop());
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (attempt.session) void cancelFaceSession(attempt.session, attempt.csrf).catch(() => undefined);
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void getFaceContext(controller.signal).then(setContext).catch((error: unknown) => {
+      if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : '서버 연결 실패');
+    });
+    const cancel = () => stopCapture();
+    window.addEventListener('pagehide', cancel);
+    return () => {
+      controller.abort();
+      stopCapture();
+      window.removeEventListener('pagehide', cancel);
+    };
+  }, []);
+
+  async function handleCapture(operation: 'enroll' | 'authenticate') {
+    if (!context || isWorking) return;
     setIsWorking(true);
     setMessage(null);
     setResult(null);
+    setBiometricPassed(false);
+    setStarted(null);
+    const attempt = { controller: new AbortController(), csrf: context.csrf_token } as NonNullable<typeof active.current>;
+    active.current = attempt;
+    const { signal } = attempt.controller;
+    const timeout = window.setTimeout(() => attempt.controller.abort(), 90000);
     try {
-      setStarted(await startFaceAuth(user.display_name));
-    } catch {
-      setMessage('인증 세션을 시작하지 못했습니다. 백엔드 서버를 확인하세요.');
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('이 브라우저에서 카메라를 사용할 수 없습니다. HTTPS 또는 localhost에서 실행하세요.');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+      if (signal.aborted) { stream.getTracks().forEach((track) => track.stop()); signal.throwIfAborted(); }
+      attempt.stream = stream;
+      const video = videoRef.current;
+      if (!video) throw new Error('카메라 미리보기를 열지 못했습니다.');
+      video.srcObject = stream;
+      await video.play();
+      signal.throwIfAborted();
+      const session = await startFaceAuth(operation, attempt.csrf, signal);
+      attempt.session = session;
+      setStarted(session);
+      const displayedAt = await waitForPaint(signal);
+      const plan = await presentFaceChallenge(session, displayedAt, attempt.csrf, signal);
+      const captureStartedAt = captureScheduleOrigin(plan, displayedAt, performance.now());
+      await captureFrames(video, plan, captureStartedAt, signal, setIllumination, async (frame) => {
+        const receipt = await sendFaceFrame(session, frame, attempt.csrf, signal);
+        if (!receipt.accepted) throw new Error('서버가 촬영 프레임을 수락하지 않았습니다.');
+      });
+      stream.getTracks().forEach((track) => track.stop());
+      video.srcObject = null;
+      const outcome = await verifyFaceAuth(session, attempt.csrf, signal);
+      if ('status' in outcome) {
+        if (outcome.status !== 'ENROLLED' || !outcome.registered) throw new Error('등록 결과를 확인하지 못했습니다.');
+        setMessage(outcome.user_message ?? '얼굴 등록이 완료되었습니다. 계정 로그인 권한은 부여되지 않습니다.');
+        setContext({ ...context, registered: true });
+      } else {
+        setResult(outcome);
+        if (isConsumableResult(outcome)) {
+          const consumed = await consumeFaceToken(session.session_id, outcome.token_id!, attempt.csrf, signal);
+          if (!consumed.consumed || consumed.account_authenticated !== false) throw new Error('얼굴 인증 토큰 소비를 확인하지 못했습니다. 승인되지 않았습니다.');
+          setBiometricPassed(true);
+        } else if (outcome.session.final_decision === 'ACCEPT') {
+          setMessage('소비 가능한 인증 토큰이 없어 승인되지 않았습니다. 운영자에게 문의하세요.');
+        }
+      }
+    } catch (error) {
+      if (active.current === attempt) {
+        setMessage(signal.aborted ? '촬영이 취소되었거나 제한 시간이 지났습니다. 다시 시도하세요.' : error instanceof Error ? error.message : '얼굴 처리 실패. 승인되지 않았습니다.');
+        setBiometricPassed(false);
+      }
     } finally {
-      setIsWorking(false);
-    }
-  }
-
-  async function handleVerify(scenario: DemoScenario) {
-    if (!started) {
-      return;
-    }
-    setIsWorking(true);
-    setMessage(null);
-    try {
-      setResult(await verifyFaceAuth(started.session_id, scenario));
-    } catch {
-      setMessage('인증 결과를 가져오지 못했습니다. 백엔드 서버를 확인하세요.');
-    } finally {
-      setIsWorking(false);
+      window.clearTimeout(timeout);
+      attempt.stream?.getTracks().forEach((track) => track.stop());
+      if (active.current === attempt) {
+        if (attempt.session) void cancelFaceSession(attempt.session, attempt.csrf).catch(() => undefined);
+        active.current = null;
+        if (videoRef.current) videoRef.current.srcObject = null;
+        setIllumination('');
+        setIsWorking(false);
+      }
     }
   }
 
   return (
-    <main className="user-shell">
+    <main className="user-shell" style={illumination ? { background: illumination, position: 'fixed', inset: 0, overflow: 'auto', zIndex: 1000 } : undefined}>
       <section className="panel user-card face-auth-card">
         <div className="section-heading">
           <div>
-            <p>Veriface User Auth</p>
-            <h1>{user.display_name}</h1>
-            <span className="header-description">현재 정상 인증은 모델팀이 전달한 데모 영상으로 HC160 CLI를 실행합니다.</span>
+            <p>Veriface Local Face Verification</p>
+            <h1>{context?.user_label ?? user.display_name}</h1>
+            <span className="header-description">서버에 고정된 로컬 사용자 얼굴을 검사합니다. 시연 로그인은 계정 신원을 검증하지 않습니다.</span>
           </div>
-          <button type="button" onClick={onLogout}>로그아웃</button>
+          <button type="button" onClick={() => { stopCapture(); onLogout(); }}>화면 나가기</button>
         </div>
-
-        <div className="camera-preview" aria-label="Demo video authentication status">
+        <div className="camera-preview" aria-label="브라우저 카메라 미리보기" style={{ height: 'auto' }}>
           <div>
-            <span />
-            <strong>{isWorking ? '데모 영상 기반 인증 실행 중' : started ? '데모 인증 세션 준비됨' : '얼굴인증 시연 대기'}</strong>
-            <p>
-              {isWorking
-                ? 'FastAPI가 HC160 CLI에 demo video를 전달해 실제 모델 판정을 요청하고 있습니다.'
-                : started?.challenge ?? '시작 버튼을 눌러 인증 세션을 생성하세요. 브라우저 카메라는 아직 사용하지 않습니다.'}
-            </p>
+            <video ref={videoRef} autoPlay muted playsInline style={{ width: '100%', maxWidth: 640 }} />
+            <strong role="status">{isWorking ? '카메라 촬영 및 서버 검사 중' : '얼굴 등록·인증 대기'}</strong>
+            <p>{started?.challenge ?? '버튼을 누르면 카메라 권한을 요청합니다. 서버가 발급한 안내를 확인한 후 촬영합니다.'}</p>
           </div>
         </div>
-
+        {context && <p>등록 상태: {context.registered ? '등록됨' : '미등록'} · 서버 사용자: {context.user_label}</p>}
+        {context?.blockers.map((blocker) => <p className="form-message" key={blocker}>{blocker}</p>)}
         <div className="auth-actions">
-          <button type="button" onClick={handleStart} disabled={isWorking}>
-            {started ? '세션 다시 시작' : '데모 인증 세션 시작'}
-          </button>
-          {started && (
-            <button type="button" onClick={() => handleVerify('normal')} disabled={isWorking}>
-              데모 영상 인증 실행
-            </button>
-          )}
+          <button type="button" onClick={() => void handleCapture('enroll')} disabled={isWorking || !context?.ready}>얼굴 등록</button>
+          <button type="button" onClick={() => void handleCapture('authenticate')} disabled={isWorking || !context?.ready || !context.registered}>얼굴 인증</button>
+          {isWorking && <button type="button" onClick={() => { stopCapture(); setIsWorking(false); setIllumination(''); setMessage('촬영을 취소했습니다.'); }}>촬영 취소</button>}
         </div>
-
-        {started && (
-          <details className="scenario-panel">
-            <summary>시연 시나리오</summary>
-            <div>
-              {(['attack', 'quality_fail', 'timeout'] as DemoScenario[]).map((scenario) => (
-                <button type="button" key={scenario} onClick={() => handleVerify(scenario)} disabled={isWorking}>
-                  {scenarioLabels[scenario]}
-                </button>
-              ))}
-            </div>
-          </details>
-        )}
-
-        {message && <p className="form-message">{message}</p>}
-
+        {message && <p className="form-message" role="alert">{message}</p>}
+        {biometricPassed && <p role="status">얼굴 검사와 일회용 토큰 소비가 완료되었습니다. 계정 로그인 상태는 변경되지 않았습니다.</p>}
         {result && (
-          <section className={`auth-result result-${result.session.final_decision.toLowerCase()}`}>
-            <div>
-              <span className={`pill ${decisionTone(result.session.final_decision)}`}>{result.session.final_decision}</span>
-              <strong>{result.user_message}</strong>
-              <p>session_id: {result.session.session_id}</p>
-            </div>
-            <div className="user-result-grid">
-              <div>
-                <span>다음 행동</span>
-                <strong>{result.next_action}</strong>
-              </div>
-              <div>
-                <span>처리 상태</span>
-                <strong>{result.session.status}</strong>
-              </div>
-              <div>
-                <span>처리 시간</span>
-                <strong>{formatNumber(result.session.latency_ms)}ms</strong>
-              </div>
-              <div>
-                <span>질의 예산</span>
-                <strong>{result.session.query_budget.used}/{result.session.query_budget.limit}</strong>
-              </div>
-            </div>
-            <div className="customer-gate-list">
-              {result.session.gates
-                .filter((gate) => gate.status !== 'PASS')
-                .map((gate) => (
-                  <span key={gate.gate_id}>
-                    {gate.gate_id}: {gate.status}{gate.reason_code ? ` / ${gate.reason_code}` : ''}
-                  </span>
-                ))}
-            </div>
-            {result.attack_detected && (
-              <div className="solution-box">
-                <h2>경고 및 솔루션</h2>
-                {result.solutions.map((solution) => (
-                  <span key={solution}>{solution}</span>
-                ))}
-              </div>
-            )}
-            {!result.attack_detected && result.solutions.length > 0 && (
-              <div className="solution-box">
-                <h2>다음 조치</h2>
-                {result.solutions.map((solution) => (
-                  <span key={solution}>{solution}</span>
-                ))}
-              </div>
-            )}
+          <section className={`auth-result result-${biometricPassed ? 'accept' : 'error'}`}>
+            <strong>{biometricPassed ? '얼굴 검사 통과' : result.session.final_decision === 'ACCEPT' ? '승인 확인 필요' : result.session.final_decision}</strong>
+            <p>{result.session.final_decision === 'ACCEPT' && !biometricPassed ? '일회용 인증 토큰 소비가 확인되기 전에는 승인되지 않습니다.' : result.user_message}</p>
+            {result.session.final_decision === 'STEP_UP' && <p>실제 추가 인증(OTP 등)은 연결되지 않았습니다. 승인되지 않았으며, 다시 촬영하거나 운영자에게 문의할 수 있습니다.</p>}
+            <p>session_id: {result.session.session_id}</p>
+            {result.solutions?.map((solution) => <p key={solution}>{solution}</p>)}
           </section>
         )}
       </section>
@@ -1326,7 +1319,7 @@ function Hc160Dashboard({ data }: { data: Hc160DashboardData }) {
           <p>Veriface HC160 Operations</p>
           <h1>Session Result Dashboard</h1>
           <span className="header-description">
-            백엔드가 계산한 인증 결과와 L0~L4 계층 상태를 운영자 화면에서 안전하게 표시합니다.
+            정적 시연 데이터(fixture)로 표시한 대시보드입니다. 브라우저 얼굴 등록·인증의 실제 /face 결과와 연결되지 않습니다.
           </span>
         </div>
         <div className="header-meta">

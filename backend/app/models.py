@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat
 
 
 class UserRole(str, Enum):
@@ -21,29 +21,41 @@ class LoginResponse(BaseModel):
     token_type: Literal["demo"] = "demo"
     role: UserRole
     display_name: str
+    authenticated: Literal[False] = False
 
 
-class FaceAuthStartRequest(BaseModel):
-    user_id: str
-    purpose: str = "LOGIN"
+class FaceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
-class FaceAuthStartResponse(BaseModel):
-    session_id: str
-    challenge: str
-    expires_in_sec: int
-    remaining_attempts: int
+class FaceAuthStartRequest(FaceRequest):
+    operation: Literal["enroll", "authenticate"]
 
 
-class FaceAuthVerifyRequest(BaseModel):
-    session_id: str
-    scenario: Literal["normal", "attack", "quality_fail", "timeout"] = "normal"
+class FaceAuthVerifyRequest(FaceRequest):
+    session_id: str = Field(min_length=1, max_length=128)
+    nonce: str = Field(min_length=1, max_length=128)
+
+
+class FacePresentRequest(FaceAuthVerifyRequest):
+    displayed_at_ms: FiniteFloat = Field(ge=0)
+
+
+class FaceFrameRequest(FaceAuthVerifyRequest):
+    frame_id: int = Field(ge=0, lt=80, strict=True)
+    timestamp_ms: FiniteFloat = Field(ge=0)
+    image: str = Field(min_length=1, max_length=200_000)
+
+
+class FaceConsumeRequest(FaceRequest):
+    session_id: str = Field(min_length=1, max_length=128)
+    token_id: str = Field(min_length=1, max_length=128)
 
 
 class QueryBudget(BaseModel):
-    used: int
-    limit: int
-    exceeded: bool
+    used: int | None
+    limit: int | None
+    exceeded: bool | None
 
 
 class GateProvenance(BaseModel):
@@ -86,6 +98,9 @@ class FaceAuthVerifyResponse(BaseModel):
     next_action: Literal["continue", "step_up", "retry", "contact_support"]
     solutions: list[str] = []
     attack_detected: bool = False
+    authorized: bool = False
+    account_authenticated: Literal[False] = False
+    token_id: str | None = None
 
 
 class SessionSummaryDto(BaseModel):

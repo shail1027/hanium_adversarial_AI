@@ -10,7 +10,7 @@
 ## Run
 
 ```bash
-npm --prefix frontend install
+npm --prefix frontend ci
 python3 -m pip install -r backend/requirements.txt
 npm run backend
 npm run dev
@@ -21,7 +21,7 @@ npm run dev
 ```bash
 python3 -m venv backend/.venv
 backend/.venv/bin/python -m pip install -r backend/requirements.txt
-backend/.venv/bin/python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8001
+backend/.venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --workers 1 --no-proxy-headers
 ```
 
 ## Build
@@ -43,7 +43,15 @@ npm run build
 
 ## Model Repository Integration
 
-[Yaho03/26_HC160](https://github.com/Yaho03/26_HC160)에는 인증 CLI와 내부 세션/정책 모듈이 있으며, 현재 확인된 기준으로 별도 REST API 서버는 없습니다. 이 저장소의 FastAPI 서버는 `backend/app/model_adapter.py`에서 HC160 CLI를 호출할 수 있게 연결되어 있고, 필수 환경변수와 모델 아티팩트가 없으면 fixture 응답으로 fallback합니다. 실제 CLI 연동에 필요한 설정값은 [backend/README.md](backend/README.md)에 정리되어 있습니다.
+기존 React/FastAPI 화면에 브라우저 카메라 등록과 HC160 FULL 인증을 연결했습니다.
+서버가 사용자별 암호화 template·calibration 파일과 고정 SQLite 예산을 관리하고,
+같은 프로세스의 세션/challenge/token 서비스를 사용합니다. 실제 촬영 경로에는
+fixture 성공 fallback이 없습니다. 등록 저장소·키·PAD·임계값 설정 및 단일 프로세스
+실행 방법은 [backend/README.md](backend/README.md)를 따릅니다.
+
+현재 로그인은 비밀번호를 검증하지 않는 화면 시연입니다. 실제 얼굴 연결은
+**서버에 고정한 로컬 사용자 검증**이며, 얼굴 판정과 일회용 token 소비가 성공해도
+계정 로그인이나 관리자 권한은 부여하지 않습니다. 운영용 계정 인증은 별도 연결이 필요합니다.
 
 ## Data
 

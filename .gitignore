@@ -10,3 +10,6 @@ __pycache__
 !.env.example
 *.local
 *.tsbuildinfo
+
+# Local biometric state must never be committed.
+/local_face_state/

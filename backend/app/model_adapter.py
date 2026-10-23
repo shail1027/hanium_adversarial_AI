@@ -1,158 +1,106 @@
-from __future__ import annotations
+"""Server-only configuration for the in-process HC160 adapter.
 
+The demo login never selects a biometric user. This is an explicitly local,
+single-operator bridge; production account identity must come from a real IdP.
+"""
 from dataclasses import dataclass
-import json
+import math
 import os
 from pathlib import Path
-import subprocess
 
 
 @dataclass(frozen=True)
 class ModelCliConfig:
-    repo_path: str | None = None
-    python_path: str = "python3"
-    demo_user_id: str | None = None
-    template_path: str | None = None
-    threshold: float | None = None
-    threshold_version: str | None = None
-    video_path: str | None = None
-    profile: str = "BASELINE_ONLY"
-    template_audit_log: str = "template-audit.jsonl"
-    frames: int = 20
-    min_valid_frames: int = 5
-    min_blur_variance: float = 40.0
-    min_brightness: float = 35.0
-    max_brightness: float = 220.0
-    device: str | None = None
-    torch_home: str | None = None
+    repo_path: str = ""
+    storage_root: str = ""
+    user_id: str = ""
+    device_id: str = ""
+    device: str = "cpu"
+    query_budget_db: str = ""
+    pad_model: str = ""
+    pad_registry: str = ""
+    threshold: str = ""
+    threshold_version: str = ""
+    template_key_id: str = ""
+    reference_distributions: str = ""
+    timeout_seconds: float = 60.0
 
     @classmethod
-    def from_env(cls) -> "ModelCliConfig":
-        handoff_dir = os.environ.get("HC160_HANDOFF_DIR")
-        threshold = os.environ.get("HC160_THRESHOLD")
+    def from_env(cls):
         return cls(
-            repo_path=os.environ.get("HC160_REPO_PATH"),
-            python_path=os.environ.get("HC160_PYTHON_PATH", "python3"),
-            demo_user_id=os.environ.get("HC160_DEMO_USER_ID"),
-            template_path=os.environ.get("HC160_TEMPLATE_PATH")
-            or _handoff_path(handoff_dir, "api-demo-user.enc.json"),
-            threshold=float(threshold) if threshold else (0.60 if handoff_dir else None),
-            threshold_version=os.environ.get("HC160_THRESHOLD_VERSION")
-            or ("demo-smoke-v1" if handoff_dir else None),
-            video_path=os.environ.get("HC160_DEMO_VIDEO_PATH")
-            or _handoff_path(handoff_dir, "api-demo-genuine.mp4"),
-            profile=os.environ.get("HC160_PROFILE", "BASELINE_ONLY"),
-            template_audit_log=os.environ.get("HC160_TEMPLATE_AUDIT_LOG")
-            or _handoff_path(handoff_dir, "api-demo-audit.jsonl")
-            or "template-audit.jsonl",
-            frames=int(os.environ.get("HC160_FRAMES", "20")),
-            min_valid_frames=int(os.environ.get("HC160_MIN_VALID_FRAMES", "5")),
-            min_blur_variance=float(os.environ.get("HC160_MIN_BLUR_VARIANCE", "40")),
-            min_brightness=float(os.environ.get("HC160_MIN_BRIGHTNESS", "35")),
-            max_brightness=float(os.environ.get("HC160_MAX_BRIGHTNESS", "220")),
-            device=os.environ.get("HC160_DEVICE"),
-            torch_home=os.environ.get("HC160_TORCH_HOME") or os.environ.get("TORCH_HOME"),
+            repo_path=os.getenv("HC160_REPO_PATH", ""),
+            storage_root=os.getenv("HC160_STORAGE_ROOT", ""),
+            user_id=os.getenv("HC160_LOCAL_USER_ID", ""),
+            device_id=os.getenv("HC160_DEVICE_ID", ""),
+            device=os.getenv("HC160_DEVICE", "cpu"),
+            query_budget_db=os.getenv("VERIFACE_QUERY_BUDGET_DB", ""),
+            pad_model=os.getenv("HC160_PAD_MODEL", ""),
+            pad_registry=os.getenv("HC160_PAD_REGISTRY", ""),
+            threshold=os.getenv("HC160_THRESHOLD", ""),
+            threshold_version=os.getenv("HC160_THRESHOLD_VERSION", ""),
+            template_key_id=os.getenv("HC160_TEMPLATE_KEY_ID", ""),
+            reference_distributions=os.getenv("HC160_REFERENCE_DISTRIBUTIONS", ""),
         )
 
+    def missing_requirements(self):
+        required = {
+            "HC160_REPO_PATH": self.repo_path, "HC160_STORAGE_ROOT": self.storage_root,
+            "HC160_LOCAL_USER_ID": self.user_id, "HC160_DEVICE_ID": self.device_id,
+            "VERIFACE_QUERY_BUDGET_DB": self.query_budget_db,
+            "HC160_PAD_MODEL": self.pad_model, "HC160_PAD_REGISTRY": self.pad_registry,
+            "HC160_THRESHOLD": self.threshold, "HC160_THRESHOLD_VERSION": self.threshold_version,
+            "HC160_TEMPLATE_KEY_ID": self.template_key_id,
+            "HC160_TEMPLATE_KEYS": os.getenv("HC160_TEMPLATE_KEYS"),
+        }
+        return [key for key, value in required.items() if not value]
 
-class ModelCliAdapter:
-    """Optional adapter for the HC160 model repository CLI.
+    def blockers(self):
+        errors = self.missing_requirements()
+        for name in ("repo_path", "storage_root", "query_budget_db", "pad_model", "pad_registry"):
+            value = getattr(self, name)
+            if value and not Path(value).is_absolute():
+                errors.append(f"{name}: absolute path required")
+        for name in ("repo_path", "storage_root"):
+            value = getattr(self, name)
+            if value and not Path(value).is_dir():
+                errors.append(f"{name}: directory missing")
+        for name in ("pad_model", "pad_registry", "reference_distributions"):
+            value = getattr(self, name)
+            if value and (not Path(value).is_absolute() or not Path(value).is_file()):
+                errors.append(f"{name}: absolute file required")
+        if self.query_budget_db and not Path(self.query_budget_db).parent.is_dir():
+            errors.append("query_budget_db: parent directory missing")
+        try:
+            threshold = float(self.threshold)
+            if not math.isfinite(threshold) or not -1 <= threshold <= 1:
+                raise ValueError
+        except ValueError:
+            errors.append("HC160_THRESHOLD: configured finite threshold required")
+        if self.device not in {"cpu", "cuda", "mps"}:
+            errors.append("HC160_DEVICE: unsupported device")
+        return errors
 
-    The demo server uses fixtures by default. When the model repository is available,
-    this class is the boundary where CLI JSON can be converted into the public DTO.
-    """
+    def ready(self):
+        return not self.blockers()
 
-    def __init__(self, config: ModelCliConfig) -> None:
-        self.config = config
-
-    def available(self) -> bool:
-        return bool(self.config.repo_path)
-
-    def ready(self) -> bool:
-        return all(
-            [
-                self.config.repo_path,
-                self.config.template_path,
-                self.config.threshold is not None,
-                self.config.threshold_version,
-                self.config.video_path,
-            ]
-        )
-
-    def missing_requirements(self) -> list[str]:
-        missing = []
-        if not self.config.repo_path:
-            missing.append("HC160_REPO_PATH")
-        if not self.config.template_path:
-            missing.append("HC160_TEMPLATE_PATH")
-        if self.config.threshold is None:
-            missing.append("HC160_THRESHOLD")
-        if not self.config.threshold_version:
-            missing.append("HC160_THRESHOLD_VERSION")
-        if not self.config.video_path:
-            missing.append("HC160_DEMO_VIDEO_PATH")
-        return missing
-
-    def run_demo_authenticate(self, *, user_id: str, decision_output: str | None = None) -> dict:
-        if not self.ready():
-            missing = ", ".join(self.missing_requirements())
-            raise RuntimeError(f"HC160 CLI is not fully configured: {missing}")
-
-        args = [
-            "--template",
-            str(self.config.template_path),
-            "--threshold",
-            str(self.config.threshold),
-            "--threshold-version",
-            str(self.config.threshold_version),
-            "--user-id",
-            self.config.demo_user_id or user_id,
-            "--video",
-            str(self.config.video_path),
-            "--no-preview",
-            "--profile",
-            self.config.profile,
-            "--template-audit-log",
-            self.config.template_audit_log,
-            "--frames",
-            str(self.config.frames),
-            "--min-valid-frames",
-            str(self.config.min_valid_frames),
-            "--min-blur-variance",
-            str(self.config.min_blur_variance),
-            "--min-brightness",
-            str(self.config.min_brightness),
-            "--max-brightness",
-            str(self.config.max_brightness),
-        ]
-        if self.config.device:
-            args.extend(["--device", self.config.device])
-        if decision_output:
-            args.extend(["--decision-output", decision_output, "--overwrite-decision-output"])
-        return self.run_authenticate(args)
-
-    def run_authenticate(self, args: list[str]) -> dict:
-        if not self.config.repo_path:
-            raise RuntimeError("HC160 model repository path is not configured")
-        repo_path = Path(self.config.repo_path)
-        if not repo_path.exists():
-            raise RuntimeError(f"HC160 model repository does not exist: {repo_path}")
-        command = [self.config.python_path, "-m", "src.face_auth.cli", "authenticate", *args]
-        env = os.environ.copy()
-        if self.config.torch_home:
-            env["TORCH_HOME"] = self.config.torch_home
-        completed = subprocess.run(
-            command,
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-        return json.loads(completed.stdout)
-
-
-def _handoff_path(handoff_dir: str | None, file_name: str) -> str | None:
-    if not handoff_dir:
-        return None
-    return str(Path(handoff_dir) / file_name)
+    def args(self, user_id, template_path, calibration_path, source_ip):
+        from src.face_auth.cli import build_parser
+        root = Path(self.repo_path)
+        args = build_parser().parse_args([
+            "authenticate", "--video", "browser-memory-only", "--profile", "FULL",
+            "--template", str(template_path), "--registration-calibration-artifact", str(calibration_path),
+            "--user-id", user_id, "--device", self.device, "--device-id", self.device_id,
+            "--threshold", str(self.threshold), "--threshold-version", self.threshold_version,
+            "--query-budget-store", "sqlite", "--query-budget-db", self.query_budget_db,
+            "--pad-runtime", "onnx", "--pad-model", self.pad_model,
+            "--pad-model-version", "open-model-zoo-anti-spoof-mn3-2022.1",
+            "--pad-registry", self.pad_registry,
+            "--graded-rule-table", str(root / "configs/decision/graded_decision_v1.json"),
+            "--query-budget-config", str(root / "configs/decision/query_budget_v1.json"),
+            "--template-audit-log", str(Path(self.storage_root) / "template-audit.jsonl"),
+            *(["--source-ip", source_ip] if source_ip else []),
+            *(["--decision-reference-distributions", self.reference_distributions]
+              if self.reference_distributions else []),
+        ])
+        args.template_key_id = self.template_key_id
+        return args
