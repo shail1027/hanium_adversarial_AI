@@ -187,7 +187,10 @@ Git 밖 `/private/tmp/hanium-final-demo-private`에 신규 전용 키(0600), 비
 /private/tmp/hanium-final-demo-private/start_backend.py`를 한 줄로 실행한다.
 launcher는 누락 설정이면 차단하고, 준비되면 loopback 8001 단일 worker와
 `--no-proxy-headers`로 시작한다. 프런트는 웹 root에서
-`npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort`로 실행한다.
-포트를 먼저 재확인한다. 접속 예정 주소는 http://127.0.0.1:5173 이며 현재 실행 중 주소가 아니다.
+`npm --prefix frontend run dev -- --host 127.0.0.1 --port 5174 --strictPort`로 실행한다.
+포트를 먼저 재확인한다. 접속 예정 주소는 http://127.0.0.1:5174 이며 현재 실행 중 주소가 아니다.
 worktree·venv·비공개 저장소는 /private/tmp에 있으므로 영구 운영 배포가 아니다.
 최종 증거와 제한은 인증 backend의 `docs/14_LOCAL_RUNBOOK.md` 13절에 정리했다.
+
+최종 포트 점검에서 5173은 기존 Docker 프로세스가 사용 중이므로 종료하지 않았다.
+프런트 예정 포트 5174는 현재 비어 있고 기존 서버 Origin 허용 목록에 포함된다.
