@@ -173,3 +173,21 @@ npm run lint
 이 결과는 합성 입력과 테스트 대역을 포함한 자동 검증 및 실제 PAD runtime 연결의
 증거다. 카메라를 열거나 사용자 얼굴을 촬영하지 않았다. 실제 등록·별도 인증 촬영과
 무작위 동작/조명에 대한 실물 검증, PAD 정확도·공격 방어율은 미검증 상태다.
+
+
+### 최종 시연 설정 상태 (2026-10-24)
+
+Git 밖 `/private/tmp/hanium-final-demo-private`에 신규 전용 키(0600), 비공개 등록 저장소
+(0700), 고정 절대 SQLite 경로, 사용자/기기 ID와 최종 backend/model/registry 경로를 준비했다.
+기존 등록·키를 교체하지 않았다. 실제 FaceNet CPU 로드와 SQLite 무결성도 확인했다.
+승인된 identity threshold와 version의 출처가 미확보여서 서버는 아직 시작하지 않았다.
+기준 분포도 임의 생성하지 않았으며 없을 때 STEP_UP 및 미승인 처리를 유지한다.
+
+설정 확보 후 `/private/tmp/hanium-final-web-venv/bin/python
+/private/tmp/hanium-final-demo-private/start_backend.py`를 한 줄로 실행한다.
+launcher는 누락 설정이면 차단하고, 준비되면 loopback 8001 단일 worker와
+`--no-proxy-headers`로 시작한다. 프런트는 웹 root에서
+`npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 --strictPort`로 실행한다.
+포트를 먼저 재확인한다. 접속 예정 주소는 http://127.0.0.1:5173 이며 현재 실행 중 주소가 아니다.
+worktree·venv·비공개 저장소는 /private/tmp에 있으므로 영구 운영 배포가 아니다.
+최종 증거와 제한은 인증 backend의 `docs/14_LOCAL_RUNBOOK.md` 13절에 정리했다.
