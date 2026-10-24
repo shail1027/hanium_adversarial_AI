@@ -4,6 +4,8 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
+import json
+import logging
 import random
 import sys
 from threading import RLock
@@ -82,6 +84,10 @@ class HC160Runtime:
                     excluded["+".join(result.reason_codes)] += 1
                     continue
                 crops.append(faces[0].crop)
+            logging.getLogger(__name__).info("enrollment_quality %s", json.dumps({
+                "captured_frames": len(frames), "valid_frames": len(crops),
+                "excluded_frames": len(frames) - len(crops), "exclusion_reasons": dict(excluded),
+            }, sort_keys=True))
             template, artifact = cli.create_calibrated_template(
                 crops, embedder, input_count=len(frames),
                 exclusion_reasons=dict(excluded),

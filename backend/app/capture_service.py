@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import io
+import json
 import math
 import logging
 import secrets
@@ -189,6 +190,11 @@ class CaptureService:
                         raise ValueError("Enrollment did not complete")
                     self.registry.publish(c.user_id, *pair)
                     c.state = "ENROLLED"
+                    logger.info("face_attempt %s", json.dumps({
+                        "operation": "enroll", "session_id": c.session_id, "status": "ENROLLED",
+                        **{key: result.get(key) for key in ("captured_frames", "valid_frames",
+                           "excluded_frames", "exclusion_reasons", "registration_calibration_id")},
+                    }, sort_keys=True))
                     return {"status": "ENROLLED", "registered": True,
                             **{key: result.get(key) for key in ("captured_frames", "valid_frames",
                                "excluded_frames", "exclusion_reasons", "registration_calibration_id")},
@@ -215,6 +221,9 @@ class CaptureService:
             self.runtime.consume(token_id, c.user_id, "LOCAL_FACE_CHECK", c.context_hash)
             c.state = "CONSUMED"
             c.token_id = None
+            logger.info("face_attempt %s", json.dumps({
+                "operation": "authenticate", "session_id": c.session_id, "status": "CONSUMED",
+            }, sort_keys=True))
             return {"consumed": True, "account_authenticated": False}
 
     def cancel(self, session_id, owner, nonce):
@@ -265,6 +274,12 @@ def _auth_result(c, result):
               "provenance": {"artifact_id": "hc160-runtime", "artifact_version": "db1e205",
                              "model_version": "runtime", "policy_version": "face-auth-policy-v1"}}
              for g in result.get("gates", [])]
+    logger.info("face_attempt %s", json.dumps({
+        "operation": c.operation, "session_id": c.session_id, "decision": decision,
+        "status": "COMPLETED", "gates": gates,
+        **{key: result.get(key) for key in ("total_frames", "valid_face_frames", "calibration",
+                                           "attempt_id", "evidence_digest", "query_budget_summary")},
+    }, sort_keys=True))
     return {"session": {"schema_version": "1.0", "session_id": c.session_id,
             "status": "COMPLETED", "final_decision": decision, "created_at": c.created_at,
             "completed_at": _utc_now(), "latency_ms": None, "attempt_count": 1,
@@ -286,6 +301,10 @@ def _auth_result(c, result):
 
 
 def _error_result(c, code):
+    logger.info("face_attempt %s", json.dumps({
+        "operation": c.operation, "session_id": c.session_id, "decision": "ERROR",
+        "status": "ERROR", "error_code": code,
+    }, sort_keys=True))
     return {"session": {"schema_version": "1.0", "session_id": c.session_id, "status": "ERROR",
             "final_decision": "ERROR", "created_at": c.created_at, "completed_at": _utc_now(),
             "latency_ms": None, "attempt_count": 1, "query_budget": {"used": None, "limit": None, "exceeded": None},

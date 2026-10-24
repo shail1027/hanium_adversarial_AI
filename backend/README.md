@@ -214,3 +214,19 @@ worktree·venv·비공개 저장소는 /private/tmp에 있으므로 영구 운�
 등록 후 인증 설정 재확인, artifact-only 인증의 정상/미검증/다른 binding/변조/누락을
 회귀 검증했다. 자동 검증은 합성 입력을 사용하며 실물 등록·다른 사람 인증 결과를
 대신하지 않는다.
+
+
+### 실물 확인 기록 (2026-10-24 후속)
+
+비공개 launcher는 `backend.app` INFO 로그를 활성화한다. `face_attempt`에는 등록/인증
+session ID, 완료/실패 판정, 적용 calibration, 프레임 수, gate 사유와 질의 예산을,
+`enrollment_quality`에는 등록 성공 전에도 품질 제외 수/사유를 기록한다.
+`CONSUMED`는 실제 토큰 소비 성공 뒤에만 기록한다. 얼굴 프레임·임베딩·template·키·
+사용자 ID·nonce·승인 token은 기록하지 않는다. 로그는 Git 밖 비공개 경로에 보관한다.
+고정 artifact와 같은 웹 template로 본인/타인 별도 시도를 확인하며 결과로 재튜닝하지 않는다.
+부재/미완료/품질 실패를 성공으로 세지 않는다. 촬영 1회는 낮은 FAR의 근거가 아니다.
+
+관련 추가 회귀는 먼저 4개 실패를 확인한 뒤 HTTP·runtime 연결 범위에서 42 passed,
+1 skipped로 통과했다. skipped는 앞선 62개 전체 검증에 포함해 이미 통과한 opt-in
+실제 ONNX 재검사이며 로그 변경 후 재실행하지 않았다. 결과:
+`/private/tmp/hanium-final-verification/closeout-audit-{red,green}.log`.

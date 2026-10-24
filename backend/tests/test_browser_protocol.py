@@ -294,3 +294,30 @@ def test_actual_result_includes_runtime_calibration_and_frame_evidence(web):
     assert result["session"]["decision_provenance"]["calibration_artifact_id"] == "bound-test-artifact"
     assert result["session"]["audit"]["total_frames"] == 30
     assert result["session"]["audit"]["valid_face_frames"] == 24
+
+
+@pytest.mark.parametrize("decision", ["ACCEPT", "STEP_UP", "REJECT", "ERROR"])
+def test_private_attempt_logs_preserve_outcome_without_credentials(web, caplog, decision):
+    import json
+    caplog.set_level("INFO", logger="backend.app.capture_service")
+    client, _, runtime, _ = web
+    enrolled(web)
+    runtime.decision = decision
+    if decision == "ERROR":
+        runtime.failure = ValueError("private-error-detail")
+    session = capture(web, "authenticate")
+    body = client.post("/api/face/verify", json=session).json()
+    if decision == "ACCEPT":
+        client.post("/api/face/consume", json={"session_id": session["session_id"], "token_id": body["token_id"]})
+    events = [json.loads(r.message.removeprefix("face_attempt ")) for r in caplog.records
+              if r.message.startswith("face_attempt ")]
+    assert events[0]["operation"] == "enroll" and events[0]["status"] == "ENROLLED"
+    outcome = next(e for e in events if e.get("decision") == decision)
+    assert outcome["session_id"] == session["session_id"]
+    if decision == "ERROR":
+        assert outcome["error_code"] == "AUTHENTICATION_FAILED"
+    if decision == "ACCEPT":
+        assert events[-1]["status"] == "CONSUMED"
+    encoded = json.dumps(events)
+    for forbidden in ("one-use-test-token", session["nonce"], "server-alice", "private-error-detail", "image_bgr", "embedding"):
+        assert forbidden not in encoded
