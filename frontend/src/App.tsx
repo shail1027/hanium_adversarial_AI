@@ -182,8 +182,13 @@ function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () =
       const outcome = await verifyFaceAuth(session, attempt.csrf, signal);
       if ('status' in outcome) {
         if (outcome.status !== 'ENROLLED' || !outcome.registered) throw new Error('등록 결과를 확인하지 못했습니다.');
-        setMessage(outcome.user_message ?? '얼굴 등록이 완료되었습니다. 계정 로그인 권한은 부여되지 않습니다.');
-        setContext({ ...context, registered: true });
+        setMessage([
+          outcome.user_message ?? '얼굴 등록이 완료되었습니다. 계정 로그인 권한은 부여되지 않습니다.',
+          `촬영 ${outcome.captured_frames ?? '-'} / 유효 ${outcome.valid_frames ?? '-'} / 제외 ${outcome.excluded_frames ?? '-'} 프레임.`,
+          `제외 사유: ${Object.entries(outcome.exclusion_reasons ?? {}).map(([reason, count]) => `${reason}: ${count}`).join(', ') || '없음'}.`,
+          `등록 보정: ${outcome.registration_calibration_id ?? '-'}`,
+        ].join(' '));
+        setContext(await getFaceContext(signal));
       } else {
         setResult(outcome);
         if (isConsumableResult(outcome)) {
@@ -245,6 +250,15 @@ function UserAuthShell({ user, onLogout }: { user: LoginResponse; onLogout: () =
             <p>{result.session.final_decision === 'ACCEPT' && !biometricPassed ? '일회용 인증 토큰 소비가 확인되기 전에는 승인되지 않습니다.' : result.user_message}</p>
             {result.session.final_decision === 'STEP_UP' && <p>실제 추가 인증(OTP 등)은 연결되지 않았습니다. 승인되지 않았으며, 다시 촬영하거나 운영자에게 문의할 수 있습니다.</p>}
             <p>session_id: {result.session.session_id}</p>
+            <p>촬영 / 유효 얼굴 프레임: {String(result.session.audit?.total_frames ?? '-')} / {String(result.session.audit?.valid_face_frames ?? '-')}</p>
+            <p>적용 보정 파일: {result.session.decision_provenance.calibration_artifact_id ?? '-'}</p>
+            <details>
+              <summary>실제 판정 근거</summary>
+              <pre>{JSON.stringify(result.session.audit?.calibration ?? null, null, 2)}</pre>
+              <ul>{result.session.gates.map((gate) => (
+                <li key={gate.gate_id}>{gate.label ?? gate.gate_id}: {gate.status} · score {gate.score ?? '-'} · threshold {gate.threshold ?? '-'} · {gate.reason_code ?? '사유 없음'}</li>
+              ))}</ul>
+            </details>
             {result.solutions?.map((solution) => <p key={solution}>{solution}</p>)}
           </section>
         )}

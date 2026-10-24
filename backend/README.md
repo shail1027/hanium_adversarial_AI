@@ -37,7 +37,9 @@ npm --prefix frontend ci
 ```
 
 서버 프로세스를 시작하기 **전에** 다음을 설정한다. 경로는 전부 서버가 관리하는
-절대 경로다. 기존에 승인된 threshold와 version을 사용하며 예시 숫자로 대체하지 않는다.
+절대 경로다. 등록에는 저장소·로컬 사용자·키·동일 device 설정이 필요하다.
+PAD·SQLite·고정 device ID는 인증 시에 필요하다. population threshold를 쓰려면
+기존에 승인된 값과 version을 함께 설정하며 예시 숫자로 대체하지 않는다.
 
 | 변수 | 의미 |
 |---|---|
@@ -49,7 +51,7 @@ npm --prefix frontend ci
 | `VERIFACE_QUERY_BUDGET_DB` | 모든 FULL 요청이 공유하는 고정 SQLite 절대 경로, 부모 디렉터리 필요 |
 | `HC160_PAD_MODEL` | 실제 `anti-spoof-mn3.onnx` 절대 경로 |
 | `HC160_PAD_REGISTRY` | 기준 저장소 `configs/models/anti-spoof-mn3.json`의 절대 경로 |
-| `HC160_THRESHOLD` / `HC160_THRESHOLD_VERSION` | 기존 검증/운영 설정의 임계값과 버전, 자동 기본값 없음 |
+| `HC160_THRESHOLD` / `HC160_THRESHOLD_VERSION` | 선택적 population fallback 쌍. 모두 생략하면 검증되고 template/model/device에 결합된 등록 보정 artifact만 사용. 일부만 설정하거나 유효하지 않은 값은 차단 |
 | `HC160_TEMPLATE_KEY_ID` | 암호화 등록에 사용할 서버 키 ID |
 | `HC160_TEMPLATE_KEYS` | 기존 HC160 키 계약의 JSON, 환경에서만 제공하고 커밋/화면 출력 금지 |
 | `HC160_REFERENCE_DISTRIBUTIONS` | 선택적 절대 기준 분포 JSON 경로; 없으면 기존 정책대로 STEP_UP 가능 |
@@ -76,6 +78,9 @@ PAD 정확도 검증을 의미하지 않는다.
 
 1. `GET /api/face/context`: 로컬 사용자 표시, 등록 상태, 설정 준비 상태와 CSRF를 반환한다.
    브라우저에는 HttpOnly/SameSite 쿠키를 주고 이후 POST마다 CSRF·쿠키 소유자를 검증한다.
+   `ready`/`blockers`는 미등록이면 등록 요건, 등록 후면 인증 요건을 나타낸다.
+   health의 `hc160_runtime_ready`는 인증 설정 요건만 확인하며 artifact 유효성은 실제
+   인증 평가에서 확인한다. 등록 성공 후 브라우저는 context를 다시 읽는다.
 2. `POST /api/face/start {operation}`: `enroll` 또는 `authenticate`. 실제 백엔드 세션과
    무작위 challenge/nonce를 발급한다. 다른 활성 촬영이 있으면 충돌로 거부한다.
 3. 화면에 안내를 렌더링하고 두 animation frame 이후 `/face/present`에
@@ -94,7 +99,11 @@ PAD 정확도 검증을 의미하지 않는다.
 6. 등록은 기존 `create_calibrated_template`/`save_calibrated_template`을 사용한다. 성공 후에만
    사용자별 template/calibration 매핑을 원자적으로 공개한다. 기존 등록은 덮어쓰지 않으며
    해시·사용자·디렉터리 경계·template/model/device binding을 인증 시 다시 검증한다.
-7. 인증은 기존 FULL pipeline과 정책을 사용한다. `ACCEPT`에 실제 token이 있어야
+   등록 응답에는 촬영·유효·제외 프레임 수, 제외 사유, 보정 artifact ID를 보존한다.
+7. 인증은 기존 FULL pipeline과 정책을 사용한다. population fallback을 생략한 경우
+   누락·변조·미검증·다른 template/model/device의 보정은 실패 처리한다.
+   실제 결과 화면에는 gate별 상태·score·threshold·사유와 전체/유효 프레임 수,
+   적용 보정 artifact와 provenance를 표시한다. `ACCEPT`에 실제 token이 있어야
    `/face/consume {session_id, token_id}`를 호출할 수 있고 같은 프로세스에서 일회용 소비한다.
    화면은 소비 확인 후에만 **얼굴 검사 통과**를 표시한다. `STEP_UP`/`REJECT`에는 token이 없고,
    추가 인증 수단이 연결되지 않은 STEP_UP은 미승인 상태로 남는다.
@@ -180,10 +189,12 @@ npm run lint
 Git 밖 `/private/tmp/hanium-final-demo-private`에 신규 전용 키(0600), 비공개 등록 저장소
 (0700), 고정 절대 SQLite 경로, 사용자/기기 ID와 최종 backend/model/registry 경로를 준비했다.
 기존 등록·키를 교체하지 않았다. 실제 FaceNet CPU 로드와 SQLite 무결성도 확인했다.
-승인된 identity threshold와 version의 출처가 미확보여서 서버는 아직 시작하지 않았다.
+population threshold와 version은 확보하지 않아 모두 생략한다. 웹 등록은 인증용
+설정과 분리되어 있으며, 이후 인증은 실제로 생성한 검증된 bound artifact를 요구한다.
+본 변경 검증에서는 서버를 시작하거나 카메라를 사용하지 않았다.
 기준 분포도 임의 생성하지 않았으며 없을 때 STEP_UP 및 미승인 처리를 유지한다.
 
-설정 확보 후 `/private/tmp/hanium-final-web-venv/bin/python
+실제 시연 실행은 `/private/tmp/hanium-final-web-venv/bin/python
 /private/tmp/hanium-final-demo-private/start_backend.py`를 한 줄로 실행한다.
 launcher는 누락 설정이면 차단하고, 준비되면 loopback 8001 단일 worker와
 `--no-proxy-headers`로 시작한다. 프런트는 웹 root에서
@@ -194,3 +205,12 @@ worktree·venv·비공개 저장소는 /private/tmp에 있으므로 영구 운�
 
 최종 포트 점검에서 5173은 기존 Docker 프로세스가 사용 중이므로 종료하지 않았다.
 프런트 예정 포트 5174는 현재 비어 있고 기존 서버 Origin 허용 목록에 포함된다.
+
+### 등록/인증 설정 분리 검증 (2026-10-24 KST)
+
+위와 같은 실제 PAD 모델과 `HC160_TEST_REPO`를 지정해 backend 전체 **62 passed,
+0 skipped**, 촬영 프로토콜 **7 passed**, TypeScript/production build와 ESLint 통과를
+확인했다. population 쌍 생략, 불완전/비정상 쌍 차단, 인증 설정 없이 등록 시작,
+등록 후 인증 설정 재확인, artifact-only 인증의 정상/미검증/다른 binding/변조/누락을
+회귀 검증했다. 자동 검증은 합성 입력을 사용하며 실물 등록·다른 사람 인증 결과를
+대신하지 않는다.

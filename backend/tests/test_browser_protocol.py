@@ -256,3 +256,41 @@ def test_forwarded_ip_is_not_used_as_trusted_identity(web):
     session = capture(web, "authenticate")
     assert client.post("/api/face/verify", json=session).status_code == 200
     assert runtime.identity == ("server-alice", "127.0.0.1")
+
+
+def test_registration_context_and_start_do_not_require_auth_configuration(web):
+    client, service, _, _ = web
+    service.config = replace(service.config, pad_model="", pad_registry="", query_budget_db="",
+                             device_id="", threshold="", threshold_version="")
+    # create_app retains its immutable config, so test a new app with the same runtime.
+    app = create_app(service.config, Runtime(), Clock())
+    with TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 41000)) as local:
+        context = local.get("/api/face/context").json()
+        assert context["ready"] is True
+        assert context["registered"] is False
+        local.headers["X-CSRF-Token"] = context["csrf_token"]
+        start = local.post("/api/face/start", json={"operation": "enroll"})
+        assert start.status_code == 200, start.text
+        local.post("/api/face/cancel", json={key: start.json()[key] for key in ("session_id", "nonce")})
+        registry = app.state.capture_service.registry
+        pair = registry.allocate(service.config.user_id)
+        pair[0].write_text("synthetic encrypted test output")
+        pair[1].write_text("synthetic calibration test output")
+        registry.publish(service.config.user_id, *pair)
+        assert local.get("/api/face/context").json()["ready"] is False
+        assert local.post("/api/face/start", json={"operation": "authenticate"}).status_code == 503
+
+
+def test_actual_result_includes_runtime_calibration_and_frame_evidence(web):
+    client, _, runtime, _ = web
+    enrolled(web)
+    evaluate = runtime.evaluate
+    def with_evidence(*args):
+        return {**evaluate(*args), "calibration": {"artifact_id": "bound-test-artifact", "source": "registration_calibration"},
+                "total_frames": 30, "valid_face_frames": 24}
+    runtime.evaluate = with_evidence
+    session = capture(web, "authenticate")
+    result = client.post("/api/face/verify", json=session).json()
+    assert result["session"]["decision_provenance"]["calibration_artifact_id"] == "bound-test-artifact"
+    assert result["session"]["audit"]["total_frames"] == 30
+    assert result["session"]["audit"]["valid_face_frames"] == 24

@@ -49,3 +49,41 @@ def test_environment_does_not_infer_demo_threshold_or_user(monkeypatch):
     monkeypatch.setenv("HC160_DEMO_USER_ID", "old-untrusted-demo")
     config = ModelCliConfig.from_env()
     assert config.user_id == config.threshold == config.threshold_version == ""
+
+
+def test_enrollment_ready_without_authentication_configuration(tmp_path, monkeypatch):
+    monkeypatch.setenv("HC160_TEMPLATE_KEYS", "test-only")
+    config = ModelCliConfig(repo_path=str(tmp_path), storage_root=str(tmp_path),
+                            user_id="alice", template_key_id="key")
+    assert config.ready("enroll")
+    assert not config.ready("authenticate")
+
+
+@pytest.mark.parametrize("threshold,version", [("", ""), ("0.73", "validated-population")])
+def test_population_pair_is_optional_but_complete(tmp_path, monkeypatch, threshold, version):
+    monkeypatch.setenv("HC160_TEMPLATE_KEYS", "test-only")
+    (tmp_path / "pad.onnx").touch()
+    (tmp_path / "pad.json").touch()
+    config = ModelCliConfig(repo_path=str(tmp_path), storage_root=str(tmp_path), user_id="alice",
+                            device_id="fixed", template_key_id="key", threshold=threshold,
+                            threshold_version=version, query_budget_db=str(tmp_path / "budget.sqlite"),
+                            pad_model=str(tmp_path / "pad.onnx"), pad_registry=str(tmp_path / "pad.json"))
+    assert config.ready()
+    for value, label in [("", "version-only"), (".73", ""), ("nan", "invalid"), ("2", "invalid")]:
+        assert not replace(config, threshold=value, threshold_version=label).ready()
+
+
+def test_enrollment_args_use_enroll_parser_without_population_configuration(tmp_path):
+    repo = os.getenv("HC160_TEST_REPO")
+    if not repo:
+        pytest.skip("HC160_TEST_REPO required")
+    sys.path.insert(0, repo)
+    config = ModelCliConfig(repo_path=repo, storage_root=str(tmp_path), user_id="alice", template_key_id="key")
+    args = config.enrollment_args("alice", tmp_path / "template", tmp_path / "calibration")
+    assert args.command == "enroll"
+    assert args.output == str(tmp_path / "template")
+    assert args.registration_calibration_output == str(tmp_path / "calibration")
+    assert args.template_key_id == "key"
+    assert not hasattr(args, "threshold")
+    auth = config.args("alice", tmp_path / "template", tmp_path / "calibration", None)
+    assert auth.threshold is auth.threshold_version is None

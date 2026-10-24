@@ -69,7 +69,7 @@ class CaptureService:
     def start(self, owner, source_ip, operation):
         with self.lock:
             self._prune()
-            if not self.config.ready():
+            if not self.config.ready(operation):
                 raise CaptureError("CONFIGURATION_REQUIRED", "인증 서버 설정을 확인하세요.", 503)
             if any(c.state in {"ISSUED", "CAPTURING", "EVALUATING"} for c in self.captures.values()):
                 raise CaptureError("CAPTURE_BUSY", "진행 중인 촬영을 완료하거나 취소하세요.", 409)
@@ -190,6 +190,8 @@ class CaptureService:
                     self.registry.publish(c.user_id, *pair)
                     c.state = "ENROLLED"
                     return {"status": "ENROLLED", "registered": True,
+                            **{key: result.get(key) for key in ("captured_frames", "valid_frames",
+                               "excluded_frames", "exclusion_reasons", "registration_calibration_id")},
                             "user_message": "서버에 지정된 로컬 사용자의 얼굴과 보정 파일을 등록했습니다."}
                 response = _auth_result(c, result)
                 c.state = "COMPLETED"
@@ -268,8 +270,14 @@ def _auth_result(c, result):
             "completed_at": _utc_now(), "latency_ms": None, "attempt_count": 1,
             "query_budget": {key: result.get("query_budget_summary", {}).get(key)
                              for key in ("used", "limit", "exceeded")},
-            "gates": gates, "decision_provenance": {"source": "hc160_runtime", "security_profile": "FULL"},
-            "audit": {"model_source": "hc160_runtime", "evidence_digest": result.get("evidence_digest")}},
+            "gates": gates, "decision_provenance": {
+                "source": "hc160_runtime", "security_profile": "FULL",
+                "calibration_artifact_id": result.get("calibration", {}).get("artifact_id"),
+            },
+            "audit": {"model_source": "hc160_runtime", "evidence_digest": result.get("evidence_digest"),
+                      "total_frames": result.get("total_frames"),
+                      "valid_face_frames": result.get("valid_face_frames"),
+                      "calibration": result.get("calibration")}},
             "authorized": False, "account_authenticated": False, "token_id": token,
             "user_message": messages[decision],
             "next_action": "continue" if decision == "ACCEPT" else "step_up" if decision == "STEP_UP" else "retry",

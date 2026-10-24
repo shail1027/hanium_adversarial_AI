@@ -54,8 +54,7 @@ class HC160Runtime:
         cli = self._load()
         # Defaults are the exact FULL CLI defaults. No browser-selected colors.
         args = cli.build_parser().parse_args([
-            "authenticate", "--video", "unused", "--template", "unused", "--threshold", "0.6",
-            "--threshold-version", "unused", "--user-id", "unused",
+            "authenticate", "--video", "unused", "--template", "unused", "--user-id", "unused",
         ])
         return cli.IlluminationChallengeIssuer(cli._illumination_config(args)).issue(
             random.SystemRandom(), nonce=nonce,
@@ -66,7 +65,7 @@ class HC160Runtime:
     def enroll(self, user_id, frames, template_path, calibration_path):
         with self._lock:
             cli = self._load()
-            args = self.config.args(user_id, template_path, calibration_path, None)
+            args = self.config.enrollment_args(user_id, template_path, calibration_path)
             detector = cli.MTCNNFaceDetector(device=args.device)
             embedder = cli.FaceNetEmbedder(device=args.device)
             quality = cli._quality_gate(args)
@@ -98,7 +97,8 @@ class HC160Runtime:
             )
             return {
                 "status": "ENROLLED", "captured_frames": len(frames),
-                "valid_frames": len(crops), "template_version": template.template_version,
+                "valid_frames": len(crops), "excluded_frames": len(frames) - len(crops),
+                "exclusion_reasons": dict(excluded), "template_version": template.template_version,
                 "registration_calibration_id": artifact["artifact_id"],
             }
 

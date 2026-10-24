@@ -42,21 +42,26 @@ class ModelCliConfig:
             reference_distributions=os.getenv("HC160_REFERENCE_DISTRIBUTIONS", ""),
         )
 
-    def missing_requirements(self):
+    def missing_requirements(self, operation="authenticate"):
         required = {
             "HC160_REPO_PATH": self.repo_path, "HC160_STORAGE_ROOT": self.storage_root,
-            "HC160_LOCAL_USER_ID": self.user_id, "HC160_DEVICE_ID": self.device_id,
-            "VERIFACE_QUERY_BUDGET_DB": self.query_budget_db,
-            "HC160_PAD_MODEL": self.pad_model, "HC160_PAD_REGISTRY": self.pad_registry,
-            "HC160_THRESHOLD": self.threshold, "HC160_THRESHOLD_VERSION": self.threshold_version,
+            "HC160_LOCAL_USER_ID": self.user_id,
             "HC160_TEMPLATE_KEY_ID": self.template_key_id,
             "HC160_TEMPLATE_KEYS": os.getenv("HC160_TEMPLATE_KEYS"),
         }
+        if operation == "authenticate":
+            required.update({
+                "HC160_DEVICE_ID": self.device_id,
+                "VERIFACE_QUERY_BUDGET_DB": self.query_budget_db,
+                "HC160_PAD_MODEL": self.pad_model, "HC160_PAD_REGISTRY": self.pad_registry,
+            })
         return [key for key, value in required.items() if not value]
 
-    def blockers(self):
-        errors = self.missing_requirements()
-        for name in ("repo_path", "storage_root", "query_budget_db", "pad_model", "pad_registry"):
+    def blockers(self, operation="authenticate"):
+        errors = self.missing_requirements(operation)
+        auth = operation == "authenticate"
+        paths = ("repo_path", "storage_root") + (("query_budget_db", "pad_model", "pad_registry") if auth else ())
+        for name in paths:
             value = getattr(self, name)
             if value and not Path(value).is_absolute():
                 errors.append(f"{name}: absolute path required")
@@ -64,24 +69,37 @@ class ModelCliConfig:
             value = getattr(self, name)
             if value and not Path(value).is_dir():
                 errors.append(f"{name}: directory missing")
-        for name in ("pad_model", "pad_registry", "reference_distributions"):
+        for name in (("pad_model", "pad_registry", "reference_distributions") if auth else ()):
             value = getattr(self, name)
             if value and (not Path(value).is_absolute() or not Path(value).is_file()):
                 errors.append(f"{name}: absolute file required")
-        if self.query_budget_db and not Path(self.query_budget_db).parent.is_dir():
+        if auth and self.query_budget_db and not Path(self.query_budget_db).parent.is_dir():
             errors.append("query_budget_db: parent directory missing")
-        try:
-            threshold = float(self.threshold)
-            if not math.isfinite(threshold) or not -1 <= threshold <= 1:
-                raise ValueError
-        except ValueError:
-            errors.append("HC160_THRESHOLD: configured finite threshold required")
+        if auth and (self.threshold or self.threshold_version):
+            if not self.threshold or not self.threshold_version.strip():
+                errors.append("HC160_THRESHOLD / HC160_THRESHOLD_VERSION: complete pair required")
+            try:
+                threshold = float(self.threshold)
+                if not math.isfinite(threshold) or not -1 <= threshold <= 1:
+                    raise ValueError
+            except ValueError:
+                errors.append("HC160_THRESHOLD: configured finite threshold required")
         if self.device not in {"cpu", "cuda", "mps"}:
             errors.append("HC160_DEVICE: unsupported device")
         return errors
 
-    def ready(self):
-        return not self.blockers()
+    def ready(self, operation="authenticate"):
+        return not self.blockers(operation)
+
+    def enrollment_args(self, user_id, template_path, calibration_path):
+        from src.face_auth.cli import build_parser
+        return build_parser().parse_args([
+            "enroll", "--video", "browser-memory-only", "--user-id", user_id,
+            "--output", str(template_path),
+            "--registration-calibration-output", str(calibration_path),
+            "--device", self.device, "--template-key-id", self.template_key_id,
+            "--template-audit-log", str(Path(self.storage_root) / "template-audit.jsonl"),
+        ])
 
     def args(self, user_id, template_path, calibration_path, source_ip):
         from src.face_auth.cli import build_parser
@@ -90,7 +108,8 @@ class ModelCliConfig:
             "authenticate", "--video", "browser-memory-only", "--profile", "FULL",
             "--template", str(template_path), "--registration-calibration-artifact", str(calibration_path),
             "--user-id", user_id, "--device", self.device, "--device-id", self.device_id,
-            "--threshold", str(self.threshold), "--threshold-version", self.threshold_version,
+            *(["--threshold", self.threshold, "--threshold-version", self.threshold_version]
+              if self.threshold or self.threshold_version else []),
             "--query-budget-store", "sqlite", "--query-budget-db", self.query_budget_db,
             "--pad-runtime", "onnx", "--pad-model", self.pad_model,
             "--pad-model-version", "open-model-zoo-anti-spoof-mn3-2022.1",

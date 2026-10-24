@@ -53,7 +53,7 @@ export interface CapturePlan {
 export interface FaceAuthVerifyResponse {
   session: Omit<HcSessionResult, 'query_budget' | 'decision_provenance' | 'audit'> & {
     query_budget: { used: number | null; limit: number | null; exceeded: boolean | null };
-    decision_provenance: Record<string, string>;
+    decision_provenance: Record<string, string | null>;
     audit?: Record<string, unknown>;
   };
   user_message: string;
@@ -68,6 +68,11 @@ export interface EnrollResponse {
   status: 'ENROLLED';
   registered: true;
   user_message?: string;
+  captured_frames?: number | null;
+  valid_frames?: number | null;
+  excluded_frames?: number | null;
+  exclusion_reasons?: Record<string, number> | null;
+  registration_calibration_id?: string | null;
 }
 
 export function login(username: string, password: string) {

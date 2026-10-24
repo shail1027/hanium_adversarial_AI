@@ -132,13 +132,14 @@ def create_app(config=None, runtime=None, clock=time.monotonic):
                 contexts[token] = {"csrf": secrets.token_urlsafe(32), "expires": now + 1800,
                                    "ip": request.client.host}
             response.set_cookie(COOKIE, token, httponly=True, samesite="strict", max_age=1800, path="/api/face")
-            blockers = config.blockers()
+            blockers = []
             registered = False
             if service.registry is not None:
                 try:
                     registered = service.registry.registered(config.user_id)
                 except (OSError, ValueError):
                     blockers = [*blockers, "등록 파일 무결성 확인 필요"]
+            blockers = [*config.blockers("authenticate" if registered else "enroll"), *blockers]
             return {"mode": "local", "user_label": config.user_id or "서버 사용자 미설정",
                     "registered": registered, "ready": not blockers, "blockers": blockers,
                     "csrf_token": contexts[token]["csrf"], "account_authenticated": False}
@@ -146,7 +147,7 @@ def create_app(config=None, runtime=None, clock=time.monotonic):
     @app.post("/api/face/start")
     def start(payload: FaceAuthStartRequest, request: Request):
         identity = owner(request)
-        if config.ready():
+        if config.ready(payload.operation):
             call(claim_worker)
         return call(service.start, identity, request.client.host, payload.operation)
 

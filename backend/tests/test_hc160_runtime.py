@@ -26,6 +26,12 @@ class Config:
     def __init__(self, directory):
         self.directory = directory
 
+    def enrollment_args(self, user_id, template_path, calibration_path):
+        from backend.app.model_adapter import ModelCliConfig
+        return ModelCliConfig(repo_path=str(REPO), storage_root=str(self.directory),
+                              template_key_id="test-key").enrollment_args(
+                                  user_id, template_path, calibration_path)
+
     def args(self, user_id, template_path, calibration_path, source_ip):
         runtime = HC160Runtime(self)
         cli = runtime._load()
@@ -280,3 +286,26 @@ def test_frame_factory_preserves_server_time_and_source_metadata(setup_runtime):
     assert frame.captured_at_monotonic == 123.5
     assert frame.source_time_ms == 980.
     assert frame.image_bgr is image
+
+
+@pytest.mark.parametrize("mutation", ["none", "unvalidated", "wrong-binding", "malformed", "missing"])
+def test_artifact_only_authentication_fails_closed(setup_runtime, mutation):
+    runtime, cli, _, template_path, calibration_path, _ = setup_runtime
+    args = runtime.config.args("alice", template_path, calibration_path, None)
+    args.threshold = args.threshold_version = None
+    template = cli._template_repository(args).read(template_path, user_id="alice")
+    payload = json.loads(calibration_path.read_text())
+    if mutation == "unvalidated":
+        payload.update(validated=False, validation_evidence=[], limitations=["test unvalidated"])
+    if mutation == "wrong-binding":
+        payload["subject_reference"] = "template:other-person"
+    calibration_path.write_text("{}" if mutation == "malformed" else json.dumps(payload))
+    if mutation == "missing":
+        calibration_path.unlink()
+    if mutation == "none":
+        selection = runtime._bound_calibration(cli, args, template, calibration_path)
+        assert selection.provenance.applied is True
+        assert selection.provenance.artifact_id == payload["artifact_id"]
+    else:
+        with pytest.raises((cli.RegistrationCalibrationError, OSError)):
+            runtime._bound_calibration(cli, args, template, calibration_path)
