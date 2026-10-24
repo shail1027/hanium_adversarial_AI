@@ -1,7 +1,9 @@
 # Veriface 로컬 얼굴 등록·인증 연결
 
 이 서버는 기존 웹 `main`의 화면/API 구조에서 HC160의 등록·FULL 인증 서비스를 호출한다.
-백엔드 기준은 `db1e205863cf6eba7545982b8c6b96089f606ae8`이다. 요청마다 CLI를 실행하지 않는다.
+최종 통합 실행본은 `/private/tmp/hanium-final-backend`의 HC160 백엔드를 사용한다.
+최초 연결 기준은 `db1e205863cf6eba7545982b8c6b96089f606ae8`이며, 최종본은 후속 보안 수정을
+포함한다. 요청마다 CLI를 실행하지 않는다.
 하나의 프로세스에서 `SessionService`, `TokenService`, `DecisionPolicyService`를 재사용한다.
 
 ## 신뢰 범위
@@ -26,7 +28,8 @@
 기존 공통 lock은 변경하지 않았다. 기준 백엔드의 지원 환경/설치 안내도 따른다.
 
 ```bash
-# 웹 worktree 루트에서 실행. Python 3.11 기준 환경은 별도 F 검증 결과를 따른다.
+# 웹 worktree 루트에서 실행. 아래 최종 자동 검증은 Python 3.11.7에서 완료했다.
+export HC160_REPO_PATH=/private/tmp/hanium-final-backend
 python3.11 -m venv backend/.venv
 backend/.venv/bin/python -m pip install -r backend/requirements.txt
 backend/.venv/bin/python -m pip install -r "$HC160_REPO_PATH/requirements-pad-onnx.txt"
@@ -133,3 +136,40 @@ npm run lint
 조명 → 실제 판정·STEP_UP 안내 순서로 수행한다. 등록과 인증은 다른 촬영이어야 한다.
 기준 분포가 없거나 장치 품질/지연 게이트가 실패해도 임계값을 낮춰 통과시키지 않는다.
 사진/화면 재생 공격 방어율, 사용자·기기 일반화, 운영용 계정 인증은 별도 검증 대상이다.
+
+## 최종 자동 검증 기록 (2026-10-24 KST)
+
+최종 웹 worktree는 `/private/tmp/hanium-final-web`, 연결 백엔드는
+`/private/tmp/hanium-final-backend`이다. macOS 26.6.2 arm64에서
+Python 3.11.7, FastAPI 0.116.1, Uvicorn 0.35.0, Pydantic 2.11.7,
+pytest 8.4.1, HTTPX 0.28.1, ONNX Runtime 1.19.2, Torch 2.2.2,
+Torchvision 0.17.2, facenet-pytorch 2.6.0으로 검증했다. NumPy 1.26.4,
+OpenCV 4.7.0.72, Pillow 10.2.0, scikit-learn 1.2.1, SciPy 1.10.1,
+cryptography 50.0.1도 기존 얼굴 인증 요구 버전과 일치한다.
+프론트엔드는 Node.js 26.5.0, npm 11.17.0, TypeScript 5.7.3,
+Vite 6.4.3, React 18.3.1, ESLint 9.39.4를 사용했다.
+
+검증용 Python은 `/private/tmp/hanium-final-web-venv/bin/python`이다. 이 환경은
+웹 의존성을 별도로 설치하고 기존 검증 환경
+`/private/tmp/face-auth-py311-verification/macos-venv/lib/python3.11/site-packages`를
+`.pth`로 참조한다. 기존 환경은 변경하지 않았다. 독립 설치 시에는 위의
+`backend/requirements.txt`와 `requirements-pad-onnx.txt` 설치 절차를 따른다.
+
+```bash
+HC160_TEST_REPO=/private/tmp/hanium-final-backend \
+HC160_TEST_PAD_MODEL=/Users/choihwanseok/.codex/worktrees/final-pad-runtime/hanium-aml-defense/local_models/anti-spoof-mn3/anti-spoof-mn3.onnx \
+/private/tmp/hanium-final-web-venv/bin/python -m pytest backend/tests -q
+node --experimental-strip-types --test frontend/tests/faceCapture.test.ts
+npm run build
+npm run lint
+```
+
+- 웹 backend 전체 테스트: **51 passed, 0 skipped**. 실제 ONNX RGB ROI 추론 검사를 포함한다.
+- 촬영 프로토콜 테스트: **7 passed, 0 skipped**.
+- TypeScript 검사 및 프로덕션 build: 성공. ESLint: 성공.
+- Starlette TestClient의 AnyIO alias 폐기 예정 경고 1건이 있다. 테스트 실패는 없다.
+- 로그와 정확한 버전 목록: `/private/tmp/hanium-final-verification/web-*.log`.
+
+이 결과는 합성 입력과 테스트 대역을 포함한 자동 검증 및 실제 PAD runtime 연결의
+증거다. 카메라를 열거나 사용자 얼굴을 촬영하지 않았다. 실제 등록·별도 인증 촬영과
+무작위 동작/조명에 대한 실물 검증, PAD 정확도·공격 방어율은 미검증 상태다.
