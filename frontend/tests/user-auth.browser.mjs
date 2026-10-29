@@ -1,3 +1,4 @@
+import { openUserPreview } from './app-browser-helper.mjs';
 // Transport/camera stubs only: no real face, camera, backend, or FULL approval.
 import assert from 'node:assert/strict';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -48,7 +49,7 @@ await page.route('**/api/face/**',async route=>{
   await route.fulfill({json:body}).catch(()=>{});
 });
 async function open(){
-  await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5187/user-preview.html');
+  await openUserPreview(page, process.env.PREVIEW_URL || 'http://127.0.0.1:5187/user-preview.html');
   await page.getByRole('button',{name:'송금하기'}).click();
   await page.getByRole('textbox',{name:'받는 사람'}).fill('친구');
   await page.getByRole('textbox',{name:'받는 계좌'}).fill('1234-5678');

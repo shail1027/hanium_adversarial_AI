@@ -1,3 +1,4 @@
+import { openUserPreview } from './app-browser-helper.mjs';
 // Runtime motion/accessibility checks. Uses camera/API stubs; never opens a real camera.
 // PLAYWRIGHT_MODULE=/existing/playwright/index.mjs node frontend/tests/user-motion.browser.mjs
 import assert from 'node:assert/strict';
@@ -35,7 +36,7 @@ async function fillDraft() {
 try {
   for (const width of [360, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto(url);
+    await openUserPreview(page, url);
     await page.getByRole('heading', { name: '내 돈을 한눈에' }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `home overflow at ${width}`);
     await clearMotion();

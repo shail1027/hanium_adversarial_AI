@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 
 export async function checkMotion(browser, url, root) {
+  const shots = process.env.ADMIN_SCREENSHOTS || root + '/frontend/tests/admin-screenshots';
+  await fs.mkdir(shots, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const requests = new Map();
   const frames = [];
@@ -153,7 +155,7 @@ export async function checkMotion(browser, url, root) {
     assert.equal(await page.evaluate(() => document.getAnimations().length), 0);
     await provenance.click();
     assert.equal(await page.locator(`[id="${await provenance.getAttribute('aria-controls')}"]`).evaluate(el => el.inert), true);
-    await page.screenshot({ path: root + '/frontend/tests/admin-screenshots/motion-reduced-mobile.png', fullPage: false });
+    await page.screenshot({ path: shots + '/motion-reduced-mobile.png', fullPage: false });
     const touchContext = await browser.newContext({ viewport: { width: 390, height: 900 }, hasTouch: true, isMobile: true });
     const touchPage = await touchContext.newPage();
     await touchPage.route('**/api/**', route => route.fulfill({ status: 503, body: 'Static fallback test' }));
@@ -165,7 +167,7 @@ export async function checkMotion(browser, url, root) {
     await touchPage.getByRole('heading', { name: '보안 현황', exact: true }).tap();
     assert.equal(await touchPage.locator('[popover]:popover-open').count(), 0, 'touch outside dismisses');
     await touchContext.close();
-    await fs.writeFile(root + '/frontend/tests/admin-screenshots/motion-evidence.json', JSON.stringify({ viewports: [1440,1280,390,360], cards, requests: [...requests], checks: ['one-time cards','180ms page / 280ms bars','original tooltip values','retained filters/selection/scroll','hidden focus excluded','no navigation requests','refresh retains data on loading/error','retry spinner','mobile Escape/focus/inert','tooltip viewport bounds','reduced-motion zero animations','touch tooltip and outside dismissal'], capturedFrames: frames.length }, null, 2) + '\n');
+    await fs.writeFile(shots + '/motion-evidence.json', JSON.stringify({ viewports: [1440,1280,390,360], cards, requests: [...requests], checks: ['one-time cards','180ms page / 280ms bars','original tooltip values','retained filters/selection/scroll','hidden focus excluded','no navigation requests','refresh retains data on loading/error','retry spinner','mobile Escape/focus/inert','tooltip viewport bounds','reduced-motion zero animations','touch tooltip and outside dismissal'], capturedFrames: frames.length }, null, 2) + '\n');
     // Encode actual CDP screen frames with Chromium's built-in WebM encoder; no new dependency.
     const encoder = await browser.newPage();
     const base64 = await encoder.evaluate(async frames => {
@@ -189,7 +191,7 @@ export async function checkMotion(browser, url, root) {
       recorder.stop(); await done; stream.getTracks().forEach(track => track.stop());
       return await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result.split(',')[1]); reader.readAsDataURL(new Blob(chunks, { type: 'video/webm' })); });
     }, frames);
-    await fs.writeFile(root + '/frontend/tests/admin-screenshots/admin-motion.webm', Buffer.from(base64, 'base64'));
+    await fs.writeFile(shots + '/admin-motion.webm', Buffer.from(base64, 'base64'));
     await encoder.close();
     console.log('PASS motion: live animation events, request counts, retained state, refresh/retry, mobile/focus/tooltip, reduced-motion; WebM captured.');
   } finally { release?.(); await page.close(); }

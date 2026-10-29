@@ -27,7 +27,7 @@ await checkMotion(browser, 'http://127.0.0.1:'+port+'/admin-check.html', root);
 const page = await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/api/**',route=>route.fulfill({status:503,body:'Preview: static fallback'}));
-const shots=root+'/frontend/tests/admin-screenshots'; await fs.mkdir(shots,{recursive:true});
+const shots=process.env.ADMIN_SCREENSHOTS || root+'/frontend/tests/admin-screenshots'; await fs.mkdir(shots,{recursive:true});
 await page.goto('http://127.0.0.1:'+port+'/admin-check.html');
 await page.getByRole('heading',{name:'공격별 결과',exact:true}).waitFor();
 await page.getByText('PGD',{exact:true}).waitFor();

@@ -1,3 +1,4 @@
+import { openUserPreview } from './app-browser-helper.mjs';
 // Run with PLAYWRIGHT_MODULE pointing to an existing Playwright installation; no dependency changes.
 import assert from 'node:assert/strict';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -13,7 +14,7 @@ await page.route('**/api/face/context', route => route.fulfill({ json: {mode:'lo
 try {
   for (const width of [360,390,430]) {
     await page.setViewportSize({width,height:844});
-    await page.goto(process.env.PREVIEW_URL || 'http://127.0.0.1:5187/user-preview.html');
+    await openUserPreview(page, process.env.PREVIEW_URL || 'http://127.0.0.1:5187/user-preview.html');
     await page.getByRole('heading',{name:'내 돈을 한눈에'}).waitFor();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),true);
     await page.screenshot({path:`/tmp/veriface-user-screens/home-${width}.png`,fullPage:true});

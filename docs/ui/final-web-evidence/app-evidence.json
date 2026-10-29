@@ -1,0 +1,32 @@
+{
+  "url": "http://127.0.0.1:5173/",
+  "entry": "frontend/src/App.tsx",
+  "userWidths": [
+    360,
+    390,
+    430
+  ],
+  "adminWidths": [
+    1280,
+    1440
+  ],
+  "adminDatasetRequests": 42,
+  "cameraRequests": 0,
+  "errors": [],
+  "doubles": [
+    "role login response",
+    "face context",
+    "API fallback and dataset failures"
+  ],
+  "checks": [
+    "duplicate login submits remain one request",
+    "role/logout isolation",
+    "admin failure cannot block user",
+    "both CSS imports",
+    "menus",
+    "keyboard tooltip/Escape",
+    "reduced motion",
+    "mobile menu focus",
+    "no overflow"
+  ]
+}
