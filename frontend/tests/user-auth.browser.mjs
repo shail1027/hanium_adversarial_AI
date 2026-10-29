@@ -2,11 +2,18 @@ import { openUserPreview } from './app-browser-helper.mjs';
 // Transport/camera stubs only: no real face, camera, backend, or FULL approval.
 import assert from 'node:assert/strict';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const browser = await chromium.launch({ headless:true,channel:process.env.BROWSER_CHANNEL || 'chrome' });
+const browser = await chromium.launch({ headless:true,channel:process.env.BROWSER_CHANNEL || 'chrome',args:['--disable-gpu'] });
 const reduced = process.env.REDUCED_MOTION === '1';
 const page = await browser.newPage({viewport:{width:390,height:844},reducedMotion: reduced ? 'reduce' : 'no-preference'});
 await page.addInitScript(()=>{
   window.stoppedTracks=0;
+  // Invoke the real 90-second handler deterministically; no wall-clock performance claim.
+  const schedule = window.setTimeout;
+  window.setTimeout = (callback, delay, ...args) => {
+    const id = schedule(callback, delay, ...args);
+    if (delay === 90000) window.captureTimeout = () => { clearTimeout(id); callback(...args); };
+    return id;
+  };
   window.motionEvents=[];
   const animate=Element.prototype.animate;
   Element.prototype.animate=function(frames,options){
@@ -21,7 +28,7 @@ await page.addInitScript(()=>{
   HTMLCanvasElement.prototype.toDataURL=()=> 'data:image/jpeg;base64,TEST_TRANSPORT_ONLY';
 });
 let registered=false, operation, session=0, decision='ACCEPT', consumed=true, mismatch=false, holdConsume=false, releaseConsume;
-let consumeCount=0;
+let consumeCount=0, networkFailure, holdVerify=false, releaseVerify;
 await page.route('**/api/face/**',async route=>{
   const path=new URL(route.request().url()).pathname.split('/').pop();
   let body={};
@@ -29,7 +36,8 @@ await page.route('**/api/face/**',async route=>{
   if(path==='start') {operation=route.request().postDataJSON().operation;body={session_id:`stub-${++session}`,nonce:'test',challenge:'대역 안내: 오른쪽을 보세요',expires_in_sec:90};}
   if(path==='present') {
     assert.equal(await page.getByRole('status').innerText(),'대역 안내: 오른쪽을 보세요');
-    body={capture_duration_ms:1100,max_frames:20,illumination:[{offset_ms:500,duration_ms:300,color:[12,40,255]}]};
+    // Match the real web server's minimum capture plan; per-frame browser assertions add transport overhead.
+    body={capture_duration_ms:3000,max_frames:80,illumination:[{offset_ms:500,duration_ms:300,color:[12,40,255]}]};
   }
   if(path==='frame') body={accepted:true};
   if(['start','present','frame','verify','consume'].includes(path)) {
@@ -41,7 +49,9 @@ await page.route('**/api/face/**',async route=>{
       assert.ok(['rgb(255, 255, 255)','rgb(12, 40, 255)'].includes(rgb),rgb);
     }
   }
+  if(path===networkFailure) { if(path==='consume') consumeCount++; return route.abort('failed'); }
   if(path==='verify') {
+    if(holdVerify) await new Promise(resolve=>{releaseVerify=resolve;});
     if(operation==='enroll') { registered=true;body={status:'ENROLLED',registered:true}; }
     else body={session:{session_id:mismatch?'wrong':`stub-${session}`,final_decision:decision,gates:[]},token_id:decision==='ACCEPT'?'test-token':null,authorized:false,account_authenticated:false,user_message:'대역 판정',solutions:[]};
   }
@@ -96,5 +106,49 @@ try {
   assert.equal(await page.locator('.vf-user__balance').innerText(),'2,450,000원');
   assert.equal(await page.locator('.vf-user__history li').count(),0);
   assert.ok(await page.evaluate(()=>window.stoppedTracks)>0);
+  holdConsume=false;
+  for (const failure of ['verify','consume']) {
+    console.log('checking network',failure);
+    networkFailure=failure;
+    await open();
+    const beforeConsume=consumeCount;
+    await page.getByRole('button',{name:'송금 얼굴 인증 시작'}).click();
+    await page.getByRole('alert').waitFor();
+    assert.equal(await page.getByRole('heading',{name:'송금 완료'}).count(),0);
+    assert.equal(consumeCount-beforeConsume,failure==='consume'?1:0,'lost consume is never guessed or retried');
+    await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
+    await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
+    await page.getByRole('button',{name:'홈으로 돌아가기'}).click();
+    assert.equal(await page.locator('.vf-user__balance').innerText(),'2,450,000원');
+    assert.equal(await page.locator('.vf-user__history li').count(),0);
+  }
+  networkFailure=undefined;
+  for (const cleanup of ['timeout','pagehide']) {
+    console.log('checking cleanup',cleanup);
+    holdVerify=true;releaseVerify=undefined;
+    await open();
+    const beforeConsume=consumeCount;
+    const request=page.waitForRequest('**/api/face/verify');
+    await page.getByRole('button',{name:'송금 얼굴 인증 시작'}).click();
+    await request;
+    for(let i=0;!releaseVerify && i<200;i++) await new Promise(resolve=>setTimeout(resolve,10));
+    assert.equal(typeof releaseVerify,'function','verify is held before cleanup');
+    const stoppedBeforeCleanup=await page.evaluate(()=>window.stoppedTracks);
+    if(cleanup==='timeout') await page.evaluate(()=>window.captureTimeout());
+    else await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));
+    if(cleanup==='timeout') await page.getByRole('alert').waitFor();
+    else await page.getByRole('heading',{name:'송금 정보를 확인해 주세요'}).waitFor();
+    assert.ok(await page.evaluate(()=>window.stoppedTracks)>stoppedBeforeCleanup,'cleanup releases the attempt stream');
+    releaseVerify();holdVerify=false;
+    await page.waitForTimeout(30);
+    assert.equal(consumeCount,beforeConsume,'late ACCEPT after cleanup cannot consume');
+    assert.equal(await page.getByRole('heading',{name:'송금 완료'}).count(),0);
+    if(cleanup==='timeout') await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
+    await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
+    await page.getByRole('button',{name:'홈으로 돌아가기'}).click();
+    assert.equal(await page.locator('.vf-user__balance').innerText(),'2,450,000원');
+    assert.equal(await page.locator('.vf-user__history li').count(),0);
+  }
+  console.log('PASS lifecycle: verify network rejection, lost consume response, simulated 90s handler, pagehide, late ACCEPT discarded');
   console.log('PASS: stub enrollment separate; ACCEPT+consume receipt; STEP_UP/REJECT/ERROR/consume failure/session mismatch incomplete; cancel pending consume; tracks stopped');
 }catch(error){ console.error(await page.locator('main').innerText()); throw error; }finally{await browser.close();}

@@ -1,0 +1,155 @@
+{
+  "scope": "existing independent8017 health while separate model timing process runs; not same-process inference health contention",
+  "samples": [
+    {
+      "index": 0,
+      "status": 200,
+      "seconds": 0.10343350000039209
+    },
+    {
+      "index": 1,
+      "status": 200,
+      "seconds": 0.03343495900116977
+    },
+    {
+      "index": 2,
+      "status": 200,
+      "seconds": 0.002145292000932386
+    },
+    {
+      "index": 3,
+      "status": 200,
+      "seconds": 0.004335333000199171
+    },
+    {
+      "index": 4,
+      "status": 200,
+      "seconds": 0.09279187499851105
+    },
+    {
+      "index": 5,
+      "status": 200,
+      "seconds": 0.0033357079992129
+    },
+    {
+      "index": 6,
+      "status": 200,
+      "seconds": 0.0023909170013212133
+    },
+    {
+      "index": 7,
+      "status": 200,
+      "seconds": 0.0018747079993772786
+    },
+    {
+      "index": 8,
+      "status": 200,
+      "seconds": 0.0016932920007093344
+    },
+    {
+      "index": 9,
+      "status": 200,
+      "seconds": 0.033755500000552274
+    },
+    {
+      "index": 10,
+      "status": 200,
+      "seconds": 0.0018322079995414242
+    },
+    {
+      "index": 11,
+      "status": 200,
+      "seconds": 0.0540513749983802
+    },
+    {
+      "index": 12,
+      "status": 200,
+      "seconds": 0.00634787500166567
+    },
+    {
+      "index": 13,
+      "status": 200,
+      "seconds": 0.00562920800075517
+    },
+    {
+      "index": 14,
+      "status": 200,
+      "seconds": 0.0023796660025254823
+    },
+    {
+      "index": 15,
+      "status": 200,
+      "seconds": 0.008304291000968078
+    },
+    {
+      "index": 16,
+      "status": 200,
+      "seconds": 0.003564415997971082
+    },
+    {
+      "index": 17,
+      "status": 200,
+      "seconds": 0.01514754200252355
+    },
+    {
+      "index": 18,
+      "status": 200,
+      "seconds": 0.01824516600026982
+    },
+    {
+      "index": 19,
+      "status": 200,
+      "seconds": 0.0038543750015378464
+    },
+    {
+      "index": 20,
+      "status": 200,
+      "seconds": 0.052660375000414206
+    },
+    {
+      "index": 21,
+      "status": 200,
+      "seconds": 0.03610362499966868
+    },
+    {
+      "index": 22,
+      "status": 200,
+      "seconds": 0.008037750001676613
+    },
+    {
+      "index": 23,
+      "status": 200,
+      "seconds": 0.004700624998804415
+    },
+    {
+      "index": 24,
+      "status": 200,
+      "seconds": 0.005601832999673206
+    },
+    {
+      "index": 25,
+      "status": 200,
+      "seconds": 0.07157374999951571
+    },
+    {
+      "index": 26,
+      "status": 200,
+      "seconds": 0.0110878750019765
+    },
+    {
+      "index": 27,
+      "status": 200,
+      "seconds": 0.003403000002435874
+    },
+    {
+      "index": 28,
+      "status": 200,
+      "seconds": 0.03757770800075377
+    },
+    {
+      "index": 29,
+      "status": 200,
+      "seconds": 0.017068208999262424
+    }
+  ]
+}

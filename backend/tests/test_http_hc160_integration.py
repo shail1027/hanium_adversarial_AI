@@ -95,7 +95,8 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
         assert by_id["identity"]["role"] == "SCORING"
         identity = client.get("/api/health").json()["runtime_identity"]
         assert body["session"]["decision_provenance"]["runtime_identity"] == identity
-        assert by_id["identity"]["provenance"]["artifact_version"] == identity["backend_commit"]
+        assert by_id["identity"]["provenance"]["artifact_version"] == (
+            identity["backend_commit"] + ("-dirty" if identity["backend_dirty"] else ""))
         assert body["session"]["query_budget"]["used"] == 1
         assert body["session"]["query_budget"]["exceeded"] is False
         assert body["session"]["audit"]["evidence_digest"]

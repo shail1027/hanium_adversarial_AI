@@ -48,6 +48,7 @@ class Capture:
     last_timestamp: float = -1
     token_id: str | None = None
     token_deadline: float = 0
+    evaluation_deadline: float = 0
     runtime_identity: dict = field(default_factory=dict)
 
 
@@ -62,6 +63,7 @@ class CaptureService:
         self.lock = RLock()
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="hc160-inference")
         self.inference_slot = Semaphore(1)
+        self.closed = False
 
     def _prune(self):
         now = self.clock()
@@ -72,6 +74,8 @@ class CaptureService:
 
     def start(self, owner, source_ip, operation):
         with self.lock:
+            if self.closed:
+                raise CaptureError("SERVICE_CLOSED", "인증 서버가 종료 중입니다.", 503)
             self._prune()
             if not self.config.ready(operation):
                 raise CaptureError("CONFIGURATION_REQUIRED", "인증 서버 설정을 확인하세요.", 503)
@@ -103,12 +107,18 @@ class CaptureService:
                     "expires_in_sec": 30}
 
     def _get(self, session_id, owner, nonce=None, states=None):
+        if self.closed:
+            raise CaptureError("SERVICE_CLOSED", "인증 서버가 종료 중입니다.", 503)
         capture = self.captures.get(session_id)
         if capture is None or not secrets.compare_digest(capture.owner, owner):
             raise CaptureError("UNKNOWN_SESSION", "존재하지 않는 촬영 세션입니다.", 404)
         if nonce is not None and not secrets.compare_digest(capture.nonce, nonce):
             raise CaptureError("NONCE_MISMATCH", "촬영 세션이 일치하지 않습니다.", 409)
-        deadline = capture.token_deadline if capture.state == "COMPLETED" else capture.expires
+        deadline = capture.expires
+        if capture.state == "COMPLETED":
+            deadline = capture.token_deadline
+        elif capture.state == "EVALUATING":
+            deadline = capture.evaluation_deadline
         if self.clock() >= deadline:
             capture.frames.clear()
             capture.state = "EXPIRED"
@@ -166,6 +176,7 @@ class CaptureService:
             if not self.inference_slot.acquire(blocking=False):
                 raise CaptureError("INFERENCE_BUSY", "인증 처리 중입니다. 잠시 후 다시 시도하세요.", 503)
             c.state = "EVALUATING"
+            c.evaluation_deadline = self.clock() + self.config.timeout_seconds
             frames = tuple(c.frames)
             c.frames.clear()
         try:
@@ -181,14 +192,19 @@ class CaptureService:
         except Exception as exc:
             logger.warning("capture setup failed session=%s kind=%s", c.session_id, type(exc).__name__)
             self.inference_slot.release()
-            c.state = "ERROR"
+            with self.lock:
+                if c.state == "EVALUATING":
+                    c.state = "ERROR"
             return _error_result(c, "ARTIFACT_UNAVAILABLE")
         job.add_done_callback(lambda _: self.inference_slot.release())
         try:
-            result = job.result(timeout=self.config.timeout_seconds)
+            result = job.result(timeout=max(0, c.evaluation_deadline - self.clock()))
             with self.lock:
                 if c.state != "EVALUATING":
                     return _error_result(c, "CAPTURE_CANCELLED")
+                if self.clock() >= c.evaluation_deadline:
+                    c.state = "EXPIRED"
+                    return _error_result(c, "SESSION_EXPIRED")
                 if c.operation == "enroll":
                     if result.get("status") != "ENROLLED":
                         raise ValueError("Enrollment did not complete")
@@ -210,19 +226,30 @@ class CaptureService:
                 return response
         except JobTimeout:
             job.cancel()
-            c.state = "ERROR"
-            return _error_result(c, "INFERENCE_TIMEOUT")
+            with self.lock:
+                if c.state == "EVALUATING":
+                    c.state = "ERROR"
+                return _error_result(c, "CAPTURE_CANCELLED" if c.state == "CANCELLED" else "INFERENCE_TIMEOUT")
         except Exception as exc:
             logger.warning("capture processing failed session=%s operation=%s kind=%s", c.session_id, c.operation, type(exc).__name__)
-            c.state = "ERROR"
-            return _error_result(c, "ENROLLMENT_FAILED" if c.operation == "enroll" else "AUTHENTICATION_FAILED")
+            with self.lock:
+                if c.state == "EVALUATING":
+                    c.state = "ERROR"
+                return _error_result(c, "ENROLLMENT_FAILED" if c.operation == "enroll" else "AUTHENTICATION_FAILED")
 
     def consume(self, session_id, owner, token_id):
         with self.lock:
             c = self._get(session_id, owner, states={"COMPLETED"})
             if not c.token_id or not secrets.compare_digest(c.token_id, token_id):
                 raise CaptureError("TOKEN_INVALID", "승인 토큰이 없거나 일치하지 않습니다.", 409)
-            self.runtime.consume(token_id, c.user_id, "LOCAL_FACE_CHECK", c.context_hash)
+            # Native evaluate/consume share a runtime lock. Do not wait on it
+            # while holding the capture lock: cancellation must remain responsive.
+            if not self.inference_slot.acquire(blocking=False):
+                raise CaptureError("INFERENCE_BUSY", "인증 처리 중입니다. 잠시 후 다시 시도하세요.", 503)
+            try:
+                self.runtime.consume(token_id, c.user_id, "LOCAL_FACE_CHECK", c.context_hash)
+            finally:
+                self.inference_slot.release()
             c.state = "CONSUMED"
             c.token_id = None
             logger.info("face_attempt %s", json.dumps({
@@ -239,8 +266,12 @@ class CaptureService:
             return {"cancelled": True}
 
     def close(self):
-        for c in self.captures.values():
-            c.frames.clear()
+        with self.lock:
+            self.closed = True
+            for c in self.captures.values():
+                c.frames.clear()
+                c.token_id = None
+                c.state = "CANCELLED"
         self.executor.shutdown(wait=False, cancel_futures=True)
 
 

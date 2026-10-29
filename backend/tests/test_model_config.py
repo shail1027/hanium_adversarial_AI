@@ -252,7 +252,7 @@ def test_documented_collection_cli_matches_web_pipeline_configuration(tmp_path):
                       "os": SimpleNamespace(environ=env)},
                      {"user": "alice", "template": template, "calibration": calibration,
                       "registry": SimpleNamespace(root=tmp_path),
-                      "record": tmp_path / "attempt", "OUTPUT": tmp_path})
+                      "record": tmp_path / "attempt", "OUTPUT": tmp_path, "enrollment_name": "enrollment-record"})
     collected = cli.build_parser().parse_args(arguments[3:])
     config = ModelCliConfig(
         repo_path=repo, storage_root=str(tmp_path), device="cpu", device_id=env["HC160_DEVICE_ID"],

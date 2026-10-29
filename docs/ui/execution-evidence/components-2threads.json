@@ -1,0 +1,47 @@
+{
+  "scope": "component timing only; not live FULL latency or measured performance",
+  "backend": "/Users/choihwanseok/26_HP015/hanium-local/backend-final-integration",
+  "producer_before": {
+    "commit": "8cff40d9c120249e9a332c293484ed9be71dab62",
+    "dirty": true
+  },
+  "python": "3.11.7",
+  "machine": "arm64",
+  "torch": "2.2.2",
+  "torch_threads_before": 10,
+  "torch_threads_measured": 2,
+  "input": "six repeated public skimage.data.astronaut 512x512 BGR frames; PAD uses whole public RGB as ROI",
+  "doubles": [
+    "tiny torch.nn.Linear identity model and MTCNN state for fingerprint only",
+    "no identity inference, adversarial inference, active gates, camera, guard, policy or token issuance"
+  ],
+  "seconds": {
+    "pad_load_registered_onnx": 0.13553633399715181,
+    "full_factory_including_pad_load_no_identity_load": 0.16685695799969835,
+    "sbi_retinaface_loader_including_checkpoint_checks": 2.017022707997967,
+    "synthetic_first_six_frames_total": 34.1858819170011,
+    "retinaface_first_six_frames": 29.38200141699781,
+    "sbi_forward_first_six_frames": 2.653346208997391,
+    "synthetic_cached_six_frames_total": 26.308714834001876,
+    "retinaface_cached_six_frames": 24.274074290999124,
+    "sbi_forward_cached_six_frames": 2.024959957001556,
+    "pad_first_six_rois_preprocess_and_infer": 0.04929670799901942,
+    "pad_cached_six_rois_preprocess_and_infer": 0.04165383299914538,
+    "build_runtime_contract_first_real_sbi_retinaface_tiny_identity": 0.30271737500152085,
+    "build_runtime_contract_cached_real_sbi_retinaface_tiny_identity": 0.18880245800028206
+  },
+  "notes": [
+    "imports and public image decoding excluded from component timers",
+    "first/cached timings are one observation each, no latency distribution; OS file cache may already be warm"
+  ],
+  "synthetic_first_finite": true,
+  "synthetic_cached_finite": true,
+  "pad_providers": [
+    "CPUExecutionProvider"
+  ],
+  "contract_producer_dirty": true,
+  "producer_after": {
+    "commit": "8cff40d9c120249e9a332c293484ed9be71dab62",
+    "dirty": true
+  }
+}

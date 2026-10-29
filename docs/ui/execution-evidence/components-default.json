@@ -1,0 +1,47 @@
+{
+  "scope": "default Torch thread count; component timing only, not live FULL latency or performance",
+  "backend": "/Users/choihwanseok/26_HP015/hanium-local/backend-final-integration",
+  "producer_before": {
+    "commit": "8cff40d9c120249e9a332c293484ed9be71dab62",
+    "dirty": true
+  },
+  "python": "3.11.7",
+  "machine": "arm64",
+  "torch": "2.2.2",
+  "torch_threads_before": 10,
+  "torch_threads_measured": 10,
+  "input": "six repeated public skimage.data.astronaut 512x512 BGR frames; PAD uses whole public RGB as ROI",
+  "doubles": [
+    "tiny torch.nn.Linear identity model and MTCNN state for fingerprint only",
+    "no identity inference, adversarial inference, active gates, camera, guard, policy or token issuance"
+  ],
+  "seconds": {
+    "pad_load_registered_onnx": 0.09305091599890147,
+    "full_factory_including_pad_load_no_identity_load": 0.11890195900195977,
+    "sbi_retinaface_loader_including_checkpoint_checks": 1.7426694999994652,
+    "synthetic_first_six_frames_total": 49.507742208999844,
+    "retinaface_first_six_frames": 31.598638291998213,
+    "sbi_forward_first_six_frames": 16.033505498999148,
+    "synthetic_cached_six_frames_total": 51.31183125000098,
+    "retinaface_cached_six_frames": 36.88171354199949,
+    "sbi_forward_cached_six_frames": 14.398245583000971,
+    "pad_first_six_rois_preprocess_and_infer": 0.056723209003394004,
+    "pad_cached_six_rois_preprocess_and_infer": 0.04577183299988974,
+    "build_runtime_contract_first_real_sbi_retinaface_tiny_identity": 0.23632575000010547,
+    "build_runtime_contract_cached_real_sbi_retinaface_tiny_identity": 0.2567412909993436
+  },
+  "notes": [
+    "imports and public image decoding excluded from component timers",
+    "first/cached timings are one observation each, no latency distribution; OS file cache may already be warm"
+  ],
+  "synthetic_first_finite": true,
+  "synthetic_cached_finite": true,
+  "pad_providers": [
+    "CPUExecutionProvider"
+  ],
+  "contract_producer_dirty": true,
+  "producer_after": {
+    "commit": "8cff40d9c120249e9a332c293484ed9be71dab62",
+    "dirty": true
+  }
+}
