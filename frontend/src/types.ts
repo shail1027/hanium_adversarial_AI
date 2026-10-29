@@ -2,7 +2,7 @@ export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
 export type AttackFamily = 'pgd' | 'fgsm' | 'square' | 'adaptive';
 export type HcSessionStatus = 'CREATED' | 'RUNNING' | 'COMPLETED' | 'ERROR' | 'EXPIRED';
 export type HcFinalDecision = 'ACCEPT' | 'STEP_UP' | 'REJECT' | 'ERROR';
-export type HcGateStatus = 'PASS' | 'FAIL' | 'ERROR' | 'TIMEOUT' | 'NOT_EVALUATED' | 'SKIPPED' | 'UNAVAILABLE';
+export type HcGateStatus = 'SCORED' | 'PASS' | 'FAIL' | 'ERROR' | 'TIMEOUT' | 'NOT_EVALUATED' | 'SKIPPED' | 'UNAVAILABLE';
 export type HcGateRole = 'BLOCKING' | 'SCORING' | 'ESCALATION';
 export type HcSystemStatus = 'OK' | 'MEASUREMENT_PENDING' | 'NOT_EVALUATED' | 'BLOCKED' | 'DEGRADED';
 
@@ -191,6 +191,7 @@ export interface HcGateResult {
   label?: string;
   status: HcGateStatus;
   role: HcGateRole;
+  display_layer?: 'L0' | 'L1' | 'L2' | 'L2b' | 'L3' | 'L4' | null;
   latency_ms: number | null;
   score: string | number | null;
   threshold: string | number | null;

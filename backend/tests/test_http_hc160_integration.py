@@ -14,6 +14,7 @@ from backend.app.main import create_app
 from backend.app.model_adapter import ModelCliConfig
 from backend.app.hc160_runtime import HC160Runtime
 from .test_browser_protocol import Clock, capture
+from .test_face_api_schema import validate_face_response
 
 
 @pytest.mark.skipif(not os.getenv("HC160_TEST_REPO"), reason="HC160_TEST_REPO required")
@@ -53,7 +54,10 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
         client.headers["X-CSRF-Token"] = client.get("/api/face/context").json()["csrf_token"]
         web = (client, app.state.capture_service, runtime, clock)
         registration = capture(web)
-        assert client.post("/api/face/verify", json=registration).json()["status"] == "ENROLLED"
+        enrollment = client.post("/api/face/verify", json=registration)
+        assert enrollment.status_code == 200
+        validate_face_response(enrollment.json())
+        assert enrollment.json()["status"] == "ENROLLED"
         template, calibration = app.state.capture_service.registry.resolve(config.user_id)
         assert json.loads(template.read_text())["algorithm"] == "AES-256-GCM"
         # Keep the actual issued illumination times, but stream for the full random plan.
@@ -70,6 +74,9 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
             assert response.status_code == 200, response.text
         response = client.post("/api/face/verify", json=session)
         body = response.json()
+        validate_face_response(body)
+        assert "SCORE_NOT_PROVIDED" not in response.text
+        assert "MISSING_REFERENCE" not in response.text
         assert body["session"]["final_decision"] == "STEP_UP", body
         assert body["token_id"] is None
         by_id = {g["gate_id"]: g for g in body["session"]["gates"]}

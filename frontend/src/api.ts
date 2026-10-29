@@ -50,17 +50,31 @@ export interface CapturePlan {
   max_frames: number;
 }
 
+export interface RuntimeIdentity {
+  backend_commit: string;
+  backend_dirty: boolean | null;
+  web_commit: string;
+  web_dirty: boolean | null;
+}
+
 export interface FaceAuthVerifyResponse {
-  session: Omit<HcSessionResult, 'query_budget' | 'decision_provenance' | 'audit'> & {
+  session: Omit<HcSessionResult, 'schema_version' | 'query_budget' | 'decision_provenance' | 'audit'> & {
+    schema_version: '1.0';
     query_budget: { used: number | null; limit: number | null; exceeded: boolean | null };
-    decision_provenance: Record<string, string | null>;
+    decision_provenance: {
+      source: 'hc160_runtime';
+      security_profile: 'FULL';
+      runtime_identity: RuntimeIdentity;
+      calibration_artifact_id?: string | null;
+    };
     audit?: Record<string, unknown>;
   };
   user_message: string;
   next_action: 'continue' | 'step_up' | 'retry' | 'contact_support';
   solutions: string[];
   attack_detected: boolean;
-  authorized: boolean;
+  authorized: false;
+  account_authenticated: false;
   token_id: string | null;
 }
 

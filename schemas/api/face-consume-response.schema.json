@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hanium-adversarial-ai.local/schemas/api/face-consume-response.schema.json",
+  "title": "Successful local one-use face token consumption",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["consumed", "account_authenticated"],
+  "properties": {"consumed": {"const": true}, "account_authenticated": {"const": false}}
+}

@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hanium-adversarial-ai.local/schemas/api/face-verify-response.schema.json",
+  "title": "Local browser face verify response (enrollment or runtime authentication)",
+  "description": "POST /api/face/verify HTTP 200 body. Transport errors use FastAPI detail responses. Separate from the static dashboard session-result contract.",
+  "oneOf": [{"$ref": "#/$defs/enrollment"}, {"$ref": "#/$defs/authentication"}],
+  "$defs": {
+    "runtimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend_commit", "backend_dirty", "web_commit", "web_dirty"],
+      "properties": {
+        "backend_commit": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|unknown)$"},
+        "backend_dirty": {"type": ["boolean", "null"]},
+        "web_commit": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|unknown)$"},
+        "web_dirty": {"type": ["boolean", "null"]}
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "label",
+        "status",
+        "role",
+        "display_layer",
+        "latency_ms",
+        "score",
+        "threshold",
+        "reason_code",
+        "provenance"
+      ],
+      "properties": {
+        "gate_id": {"type": "string"},
+        "label": {"type": ["string", "null"]},
+        "status": {"enum": ["PASS", "FAIL", "NOT_EVALUATED", "ERROR", "SCORED"]},
+        "role": {"enum": ["BLOCKING", "SCORING", "ESCALATION"]},
+        "display_layer": {"enum": ["L0", "L1", "L2", "L2b", "L3", "L4", null]},
+        "latency_ms": {"type": ["number", "null"], "minimum": 0},
+        "score": {"type": ["string", "number", "null"]},
+        "threshold": {"type": ["string", "number", "null"]},
+        "reason_code": {"type": ["string", "null"]},
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["artifact_id", "artifact_version", "model_version", "policy_version"],
+          "properties": {
+            "artifact_id": {"const": "hc160-runtime"},
+            "artifact_version": {"type": "string", "pattern": "^(?:[0-9a-f]{40}(?:-dirty)?|unknown)$"},
+            "model_version": {"type": "string"},
+            "policy_version": {"type": "string"}
+          }
+        }
+      }
+    },
+    "enrollment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "registered",
+        "captured_frames",
+        "valid_frames",
+        "excluded_frames",
+        "exclusion_reasons",
+        "registration_calibration_id",
+        "user_message"
+      ],
+      "properties": {
+        "status": {"const": "ENROLLED"},
+        "registered": {"const": true},
+        "captured_frames": {"type": ["integer", "null"], "minimum": 0},
+        "valid_frames": {"type": ["integer", "null"], "minimum": 0},
+        "excluded_frames": {"type": ["integer", "null"], "minimum": 0},
+        "exclusion_reasons": {"type": ["object", "null"], "additionalProperties": {"type": "integer", "minimum": 0}},
+        "registration_calibration_id": {"type": ["string", "null"]},
+        "user_message": {"type": "string"}
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session",
+        "authorized",
+        "account_authenticated",
+        "token_id",
+        "user_message",
+        "next_action",
+        "solutions",
+        "attack_detected"
+      ],
+      "properties": {
+        "session": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_version",
+            "session_id",
+            "status",
+            "final_decision",
+            "created_at",
+            "completed_at",
+            "latency_ms",
+            "attempt_count",
+            "query_budget",
+            "gates",
+            "decision_provenance",
+            "audit"
+          ],
+          "properties": {
+            "schema_version": {"const": "1.0"},
+            "session_id": {"type": "string"},
+            "status": {"enum": ["COMPLETED", "ERROR"]},
+            "final_decision": {"enum": ["ACCEPT", "STEP_UP", "REJECT", "ERROR"]},
+            "created_at": {"type": "string", "format": "date-time"},
+            "completed_at": {"type": "string", "format": "date-time"},
+            "latency_ms": {"type": ["number", "null"], "minimum": 0},
+            "attempt_count": {"type": "integer", "minimum": 0},
+            "query_budget": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["used", "limit", "exceeded"],
+              "properties": {
+                "used": {"type": ["integer", "null"], "minimum": 0},
+                "limit": {"type": ["integer", "null"], "minimum": 0},
+                "exceeded": {"type": ["boolean", "null"]}
+              }
+            },
+            "gates": {"type": "array", "items": {"$ref": "#/$defs/gate"}},
+            "decision_provenance": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "security_profile", "runtime_identity"],
+              "properties": {
+                "source": {"const": "hc160_runtime"},
+                "security_profile": {"const": "FULL"},
+                "runtime_identity": {"$ref": "#/$defs/runtimeIdentity"},
+                "calibration_artifact_id": {"type": ["string", "null"]}
+              }
+            },
+            "audit": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["error_code"],
+                  "properties": {"error_code": {"type": "string"}}
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["model_source", "evidence_digest", "total_frames", "valid_face_frames", "calibration"],
+                  "properties": {
+                    "model_source": {"const": "hc160_runtime"},
+                    "evidence_digest": {"type": ["string", "null"]},
+                    "total_frames": {"type": ["integer", "null"], "minimum": 0},
+                    "valid_face_frames": {"type": ["integer", "null"], "minimum": 0},
+                    "calibration": {"type": ["object", "null"]}
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "authorized": {"const": false},
+        "account_authenticated": {"const": false},
+        "token_id": {"type": ["string", "null"]},
+        "user_message": {"type": "string"},
+        "next_action": {"enum": ["continue", "step_up", "retry", "contact_support"]},
+        "solutions": {"type": "array", "items": {"type": "string"}},
+        "attack_detected": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"session": {"properties": {"final_decision": {"const": "ACCEPT"}}}}},
+          "then": {"properties": {"token_id": {"type": "string", "minLength": 1}, "next_action": {"const": "continue"}}}
+        },
+        {
+          "if": {"properties": {"session": {"properties": {"final_decision": {"const": "STEP_UP"}}}}},
+          "then": {"properties": {"token_id": {"type": "null"}, "next_action": {"const": "step_up"}}}
+        },
+        {
+          "if": {"properties": {"session": {"properties": {"final_decision": {"const": "REJECT"}}}}},
+          "then": {"properties": {"token_id": {"type": "null"}, "next_action": {"const": "retry"}}}
+        },
+        {
+          "if": {"properties": {"session": {"properties": {"final_decision": {"const": "ERROR"}}}}},
+          "then": {"properties": {"token_id": {"type": "null"}, "next_action": {"const": "retry"}}}
+        }
+      ]
+    }
+  }
+}
