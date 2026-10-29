@@ -146,3 +146,45 @@
   .vf-user *, .vf-user *::before, .vf-user *::after { animation: none !important; transition: none !important; }
   .vf-user button:active:not(:disabled) { transform: none; }
 }
+
+/* Connected transfer: the same recipient and amount travel into confirmation. */
+.vf-user .vf-user__recipient-preview { display: flex; align-items: center; gap: 12px; margin: 0 0 26px; padding: 14px; border: 1px solid var(--vf-line); border-radius: 18px; background: #211b3370; transition: border-color 180ms ease, background-color 180ms ease; }
+.vf-user .vf-user__recipient-preview--selected { border-color: #8b5cf666; background: #33244570; }
+.vf-user .vf-user__recipient-preview > div { min-width: 0; }
+.vf-user .vf-user__eyebrow { display: block; font-size: 11px; color: var(--vf-muted); margin-bottom: 2px; }
+.vf-user .vf-user__recipient-preview strong { display: inline-block; font-size: 17px; overflow-wrap: anywhere; }
+.vf-user [data-motion-key] { position: relative; }
+.vf-user [data-motion-key="recipient-name"] { display: inline-block; }
+.vf-user .vf-user__amount-field input { font-size: 32px; font-weight: 700; transition: font-size 180ms ease; }
+.vf-user .vf-user__amount-field--compact input { font-size: 24px; }
+.vf-user .vf-user__continue { background: #493365; box-shadow: none; transition: background 180ms ease, box-shadow 180ms ease, transform 120ms ease; }
+.vf-user .vf-user__continue--ready { background: linear-gradient(110deg, #9259fb, #7839ef); box-shadow: 0 6px 24px #8b5cf638; }
+.vf-user .vf-user__continue-icon { position: absolute; right: 16px; display: inline-flex; transition: transform 220ms cubic-bezier(.22,.8,.25,1); }
+.vf-user .vf-user__continue--ready .vf-user__continue-icon { transform: rotate(-8deg) scale(1.06); }
+.vf-user .vf-user__nav { isolation: isolate; }
+.vf-user .vf-user__nav-indicator { position: absolute; z-index: -1; left: 12px; top: 8px; width: calc((100% - 24px) / 3); height: 56px; background: #8b5cf617; border: 1px solid #a778ff25; border-radius: 14px; transform: translateX(0); transition: transform 340ms cubic-bezier(.22,.8,.25,1); pointer-events: none; }
+.vf-user .vf-user__nav[data-active-tab="1"] .vf-user__nav-indicator { transform: translateX(100%); }
+.vf-user .vf-user__nav[data-active-tab="2"] .vf-user__nav-indicator { transform: translateX(200%); }
+.vf-user .vf-user__nav button[aria-current] { background: transparent; }
+.vf-user .vf-user__nav button svg { transition: transform 260ms cubic-bezier(.22,.8,.25,1); }
+.vf-user .vf-user__nav button[aria-current] svg { transform: translateY(-2px); }
+.vf-user.vf-user--working .vf-user__continue-icon, .vf-user.vf-user--working .vf-user__nav button svg { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .vf-user .vf-user__continue-icon, .vf-user .vf-user__nav button[aria-current] svg { transform: none; }
+}
+
+/* Spring response follows a deliberate action; no ambient/repeating movement. */
+.vf-user .vf-user__primary { transition: transform 260ms cubic-bezier(.2,1.45,.45,1), box-shadow 260ms ease, border-color 160ms ease; }
+.vf-user .vf-user__primary:active:not(:disabled) { transform: scale(.955) translateY(2px); box-shadow: inset 0 3px 9px #21084750; }
+.vf-user .vf-user__recipients button:active:not(:disabled) .vf-user__avatar { transform: scale(.88); }
+.vf-user .vf-user__recipients .vf-user__avatar { transition: transform 320ms cubic-bezier(.2,1.5,.4,1), background-color 180ms ease; }
+.vf-user .vf-user__nav-indicator { background: linear-gradient(135deg, #a06aff32, #8b5cf612); border-color: #b48aff40; box-shadow: 0 3px 16px #8b5cf612; transition: transform 440ms cubic-bezier(.2,1.22,.4,1); }
+.vf-user .vf-user__nav button svg { transition: transform 380ms cubic-bezier(.2,1.6,.4,1); }
+.vf-user .vf-user__nav button[aria-current] svg { transform: translateY(-4px) scale(1.12); }
+.vf-user .vf-user__continue--ready .vf-user__continue-icon { animation: vf-ready-in 380ms cubic-bezier(.2,1.3,.4,1); }
+.vf-user .vf-user__transfer-summary .vf-user__avatar { box-shadow: 0 8px 28px #8b5cf620; }
+@keyframes vf-ready-in { from { opacity: .3; transform: translateX(-10px) scale(.6) rotate(-30deg); } to { opacity: 1; transform: rotate(-8deg) scale(1.06); } }
+.vf-user.vf-user--working .vf-user__primary:active, .vf-user.vf-user--working .vf-user__nav button[aria-current] svg { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .vf-user .vf-user__primary:active:not(:disabled), .vf-user .vf-user__recipients button:active:not(:disabled) .vf-user__avatar, .vf-user .vf-user__nav button[aria-current] svg { transform: none; }
+}

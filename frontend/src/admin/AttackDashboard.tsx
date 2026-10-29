@@ -1,12 +1,13 @@
 import { Disclosure, InfoTooltip } from './Interactions';
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { loadDashboardData } from '../data';
 import type { AttackFamily, AttackFamilyRow, AttackSession, RiskLevel, RiskSession, RuleDefinition, RuleHitSummary } from '../types';
 import { filterAttacks, ratio } from './model';
 type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 type AcceptedFilter = 'all' | 'accepted' | 'rejected';
 type AccountRiskRow = { accountId: string; attempts: number; accepted: number; avgRiskScore: number; highCritical: number };
-const riskLevels: Array<RiskLevel | 'all'> = ['all', 'critical', 'high', 'medium', 'low'];
+export interface AttackFocus { id: number; family?: AttackFamily; accepted?: 'accepted'; review?: boolean }
+const riskLevels: Array<RiskLevel | 'all' | 'review'> = ['all', 'review', 'critical', 'high', 'medium', 'low'];
 const familyNotes: Record<AttackFamily, string> = {
   pgd: '모델 내부 정보를 알고 반복적으로 이미지를 조금씩 바꾸는 강한 공격입니다.',
   fgsm: '한 번의 계산으로 이미지를 바꾸는 빠른 기준 공격입니다.',
@@ -72,7 +73,7 @@ function RiskDistribution({ row }: { row: AttackFamilyRow }) {
   );
 }
 
-function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
+function AttackFamilyComparison({ rows, selected, onSelect }: { rows: AttackFamilyRow[]; selected: AttackFamily | 'all'; onSelect: (family: AttackFamily) => void }) {
   const maxSessions = Math.max(0, ...rows.map((row) => row.sessions));
 
   return (
@@ -85,7 +86,8 @@ function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
       </div>
       <div className="vf-family-grid">
         {rows.map((row) => (
-          <article className={`vf-family-card vf-family-${row.attack_family}`} key={row.attack_family}>
+          <article className={`vf-family-card vf-family-${row.attack_family}${selected === row.attack_family ? ' is-selected' : ''}`} key={row.attack_family}>
+            <button type="button" className="admin-family-select" aria-pressed={selected === row.attack_family} onClick={() => onSelect(row.attack_family)}>{familyLabels[row.attack_family]} 세션 보기 <span aria-hidden="true">↗</span></button>
             <div className="vf-family-title">
               <div>
                 <strong>
@@ -133,7 +135,7 @@ function FilterButton<T extends string>({
 }) {
   return (
     <button className={active ? 'active' : ''} type="button" aria-pressed={active} onClick={() => onClick(value)}>
-      {value}
+      {value === 'review' ? 'High / Critical' : value}
     </button>
   );
 }
@@ -412,11 +414,20 @@ function RuleStatistics({
   );
 }
 
-export function AttackDashboard({ data }: { data: DashboardData }) {
-  const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all'>('all');
+export function AttackDashboard({ data, focus }: { data: DashboardData; focus?: AttackFocus }) {
+  const [riskFilter, setRiskFilter] = useState<RiskLevel | 'all' | 'review'>('all');
   const [familyFilter, setFamilyFilter] = useState<AttackFamily | 'all'>('all');
   const [acceptedFilter, setAcceptedFilter] = useState<AcceptedFilter>('all');
   const [selectedId, setSelectedId] = useState(data.topRiskSessions[0]?.session_id ?? '');
+  const detail = useRef<HTMLDivElement>(null);
+  const workspace = useRef<HTMLDivElement>(null);
+  const previousScope = useRef('all|all|all');
+  useEffect(() => {
+    if (!focus) return;
+    setRiskFilter(focus.review ? 'review' : 'all');
+    setFamilyFilter(focus.family ?? 'all');
+    setAcceptedFilter(focus.accepted ?? 'all');
+  }, [focus]);
 
   const rulesById = useMemo(
     () => new Map(data.rules.map((rule) => [rule.id, rule])),
@@ -431,6 +442,33 @@ export function AttackDashboard({ data }: { data: DashboardData }) {
   const filteredSessions = useMemo(() => filterAttacks(data.topRiskSessions, riskFilter, familyFilter, acceptedFilter), [data.topRiskSessions, riskFilter, familyFilter, acceptedFilter]);
   const visibleId = filteredSessions.some(row => row.session_id === selectedId) ? selectedId : filteredSessions[0]?.session_id;
   const selectedSession = visibleId ? attackSessionsById.get(visibleId) : undefined;
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!detail.current || !visibleId || preference.matches) return;
+    const animation = detail.current.animate([{ opacity: .35, transform: 'translateX(28px) scale(.97)' }, { opacity: 1, transform: 'translateX(-3px) scale(1.005)', offset: .72 }, { opacity: 1, transform: 'translateX(0) scale(1)' }], { duration: 390, easing: 'cubic-bezier(.2,.75,.25,1)' });
+    const cancel = () => animation.cancel();
+    preference.addEventListener('change', cancel);
+    return () => { cancel(); preference.removeEventListener('change', cancel); };
+  }, [visibleId]);
+  useLayoutEffect(() => {
+    const scope = `${riskFilter}|${familyFilter}|${acceptedFilter}`;
+    const changed = scope !== previousScope.current;
+    previousScope.current = scope;
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (!changed || !workspace.current || preference.matches) return;
+    const targets = workspace.current.querySelectorAll('.admin-analysis-context, .admin-linked-distribution, .vf-session-layout > .vf-table-wrap');
+    const animations = [...targets].map((target, index) => target.animate([
+      { opacity: .35, transform: `translateY(${8 + index * 4}px)` },
+      { opacity: 1, transform: 'translateY(0)' },
+    ], { duration: 280 + index * 45, easing: 'cubic-bezier(.16,1,.3,1)' }));
+    const cancel = () => animations.forEach(animation => animation.cancel());
+    preference.addEventListener('change', cancel);
+    return () => { cancel(); preference.removeEventListener('change', cancel); };
+  }, [riskFilter, familyFilter, acceptedFilter]);
+  const filteredSummary = useMemo(() => ({
+    accepted: filteredSessions.filter(row => row.accepted_after_attack).length,
+    levels: riskLevels.filter(level => level !== 'all' && level !== 'review').map(level => ({ level, count: filteredSessions.filter(row => row.risk_level === level).length })),
+  }), [filteredSessions]);
   const attackFamilies: Array<AttackFamily | 'all'> = ['all', ...new Set(data.attackSessions.map(row => row.attack_family))];
   const accountRiskRows = useMemo(() => {
     const rows = new Map<string, { accepted: number; attempts: number; highCritical: number; riskTotal: number }>();
@@ -469,11 +507,16 @@ export function AttackDashboard({ data }: { data: DashboardData }) {
   );
 
   return (
-    <>
+    <div ref={workspace} className="admin-attack-workspace">
         <p className="vf-muted">공격 데이터셋 · 조건별 비교와 세션 상세 분석</p>
-        <AttackFamilyComparison rows={data.familyRows} />
+        <AttackFamilyComparison rows={data.familyRows} selected={familyFilter} onSelect={family => setFamilyFilter(current => current === family ? 'all' : family)} />
 
         <section className="vf-panel" id="sessions">
+          <div className="admin-analysis-context">
+            <div><small>현재 분석 범위</small><strong>{familyFilter === 'all' ? '모든 공격 유형' : familyLabels[familyFilter]} · {riskFilter === 'review' ? 'High / Critical' : riskFilter === 'all' ? '모든 위험도' : riskFilter} · {acceptedFilter === 'all' ? '모든 결과' : acceptedFilter}</strong><span role="status">위험 세션 자료 {filteredSessions.length} / {data.topRiskSessions.length}개 · 공격 후 승인 {filteredSummary.accepted}개</span></div>
+            <button type="button" onClick={() => { setRiskFilter('all'); setFamilyFilter('all'); setAcceptedFilter('all'); }}>필터 초기화</button>
+          </div>
+          <div className="admin-linked-distribution" aria-label="현재 필터의 위험도 분포">{filteredSummary.levels.map(({ level, count }) => <button key={level} type="button" aria-pressed={riskFilter === level} onClick={() => setRiskFilter(current => current === level ? 'all' : level)}><span>{level}</span><strong>{count}</strong><span className="admin-linked-track" aria-hidden="true"><i className={`vf-risk-${level}`} style={{ width: `${count / Math.max(filteredSessions.length, 1) * 100}%` }} /></span></button>)}</div>
           <div className="vf-section-heading">
             <div>
               <p>Risk Sessions</p>
@@ -511,7 +554,7 @@ export function AttackDashboard({ data }: { data: DashboardData }) {
           {filteredSessions.length === 0 && <p role="status">조건에 맞는 실험 세션이 없습니다.</p>}
           <div className="vf-session-layout">
             <RiskSessionsTable sessions={filteredSessions} selectedId={visibleId ?? ''} onSelect={setSelectedId} />
-            <SessionDetail session={selectedSession} rulesById={rulesById} />
+            <div ref={detail} className="admin-session-detail" aria-label="선택한 공격 세션 상세"><SessionDetail session={selectedSession} rulesById={rulesById} /></div>
           </div>
         </section>
 
@@ -521,6 +564,6 @@ export function AttackDashboard({ data }: { data: DashboardData }) {
         </div>
 
         <RuleStatistics summary={data.ruleSummary} rulesById={rulesById} />
-    </>
+    </div>
   );
 }

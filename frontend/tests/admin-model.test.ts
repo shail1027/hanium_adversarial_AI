@@ -16,6 +16,8 @@ test('ratios retain numerator/denominator and empty data is unaggregated', () =>
   assert.deepEqual(attackSummary(attacks), { total: 3, accepted: 1, review: 2 });
 });
 test('attack filters intersect without losing original row or showing stale selection', () => {
+  assert.deepEqual(filterAttacks(attacks, 'review', 'all', 'all'), [attacks[0], attacks[2]]);
+  assert.deepEqual(filterAttacks(attacks, 'review', 'pgd', 'accepted'), [attacks[0]]);
   assert.deepEqual(filterAttacks(attacks, 'high', 'pgd', 'accepted'), [attacks[0]]);
   assert.deepEqual(filterAttacks(attacks, 'low', 'pgd', 'all'), []);
   assert.deepEqual(filterAttacks(attacks, 'all', 'all', 'rejected'), attacks.slice(1));

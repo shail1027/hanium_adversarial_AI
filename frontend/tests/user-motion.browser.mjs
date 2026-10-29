@@ -46,7 +46,7 @@ try {
     await page.mouse.down();
     await page.waitForFunction(() => {
       const button = document.querySelector('.vf-user__account button');
-      return getComputedStyle(button).transform === 'matrix(0.97, 0, 0, 0.97, 0, 0)';
+      return getComputedStyle(button).transform === 'matrix(0.955, 0, 0, 0.955, 0, 1.91)';
     });
     await page.mouse.up();
     await page.getByRole('heading', { name: '어디로 보낼까요?' }).waitFor();
@@ -69,7 +69,9 @@ try {
     await clearMotion();
     // DOM clicks intentionally bypass animation-stability waiting to exercise rapid navigation.
     await page.getByRole('button', { name: '이전 화면으로 돌아가기' }).evaluate(button => button.click());
-    assert.equal((await screenMotion())[0].frames[0].transform, 'translateX(-18px)');
+    const linked = await page.evaluate(() => window.motionCalls.filter(item => item.duration === 480));
+    assert.equal(linked.length, 3, 'recipient avatar/name and amount retain shared geometry on back');
+    assert.equal((await screenMotion()).length, 0, 'shared transition does not also translate the entire form');
     assert.equal(await amount.inputValue(), '30000');
     for (let index = 0; index < 3; index++) {
       await page.getByRole('button', { name: '다음' }).evaluate(button => { button.click(); button.click(); });

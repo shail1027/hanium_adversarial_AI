@@ -7,8 +7,8 @@ export function attackSummary(rows: RiskSession[]) {
   return { total: rows.length, accepted: rows.filter(row => row.accepted_after_attack).length,
     review: rows.filter(row => row.risk_level === 'high' || row.risk_level === 'critical').length };
 }
-export function filterAttacks<T extends RiskSession>(rows: T[], risk: RiskLevel | 'all', family: AttackFamily | 'all', accepted: 'all' | 'accepted' | 'rejected') {
-  return rows.filter(row => (risk === 'all' || row.risk_level === risk)
+export function filterAttacks<T extends RiskSession>(rows: T[], risk: RiskLevel | 'all' | 'review', family: AttackFamily | 'all', accepted: 'all' | 'accepted' | 'rejected') {
+  return rows.filter(row => (risk === 'all' || (risk === 'review' ? row.risk_level === 'high' || row.risk_level === 'critical' : row.risk_level === risk))
     && (family === 'all' || row.attack_family === family)
     && (accepted === 'all' || row.accepted_after_attack === (accepted === 'accepted')));
 }

@@ -188,3 +188,50 @@
 }
 
 .veriface-admin .admin-page[data-menu=overview] > .admin-metrics > .vf-stat-card { min-height: 208px; }
+
+/* Navigation and analysis share a persistent selection instead of restarting each card. */
+.veriface-admin .admin-sidebar nav { position: relative; isolation: isolate; }
+.veriface-admin .admin-nav-indicator { position: absolute; inset: 0 0 auto; height: 56px; border-radius: 10px; background: linear-gradient(110deg,#7044d9,#5028ab); box-shadow: 0 8px 24px #06020e40; pointer-events: none; z-index: -1; }
+.veriface-admin .admin-sidebar nav button[aria-current=page] { box-shadow: none; }
+.veriface-admin .admin-sidebar nav button::before { display: none; }
+.veriface-admin .admin-metric-link { display: flex; align-items: center; justify-content: space-between; width: 100%; background: transparent; border: 0; border-top: 1px solid #ffffff15; border-radius: 0; color: #ccb2ff; padding: 10px 0 0; margin-top: 16px; font-size: 12px; text-align: left; }
+.veriface-admin .admin-metric-link:hover { background: transparent; color: white; }
+.veriface-admin .admin-metric-link span { font-size: 18px; }
+.veriface-admin .admin-family-drill { background: transparent; border-color: transparent; padding: 0 4px; color: #dfccff; font-weight: 600; }
+.veriface-admin .admin-review-item button { margin-top: 12px; font-size: 12px; }
+.veriface-admin .vf-family-card { position: relative; }
+.veriface-admin .vf-family-card.is-selected { border-color: #b796ff; background: #302344; box-shadow: 0 0 0 1px #b796ff44; }
+.veriface-admin .admin-family-select { display: flex; justify-content: space-between; width: 100%; margin-bottom: 16px; color: #d5bcff; font-size: 12px; }
+.veriface-admin .admin-analysis-context { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 18px; margin-bottom: 16px; background: #2d2240; border: 1px solid #5c4181; border-radius: 14px; }
+.veriface-admin .admin-analysis-context > div { display: grid; gap: 6px; min-width: 0; }
+.veriface-admin .admin-analysis-context small { color: #b9a6d6; }
+.veriface-admin .admin-analysis-context strong { overflow-wrap: anywhere; }
+.veriface-admin .admin-analysis-context span { color: #bfb1d1; font-size: 12px; }
+.veriface-admin .admin-linked-distribution { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 18px 0 24px; }
+.veriface-admin .admin-linked-distribution > button { display: grid; grid-template-columns: 1fr auto; gap: 10px; text-align: left; font-size: 12px; padding: 12px; }
+.veriface-admin .admin-linked-track { grid-column: 1/-1; display: block; height: 5px; border-radius: 4px; background: #ffffff12; overflow: hidden; }
+.veriface-admin .admin-linked-track i { display: block; height: 100%; background: #b697ef; }
+.veriface-admin .admin-session-detail { min-width: 0; align-self: start; }
+.veriface-admin .admin-session-detail .vf-detail-panel { border: 1px solid #79559f; border-radius: 16px; padding: 20px; }
+@media (min-width: 1200px) { .veriface-admin .vf-session-layout { grid-template-columns: minmax(0,1fr) minmax(280px,340px); align-items: start; gap: 18px; } .veriface-admin .admin-session-detail { position: sticky; top: 20px; max-height: calc(100dvh - 40px); overflow: auto; border-radius: 16px; } }
+@media (max-width: 760px) { .veriface-admin .admin-linked-distribution { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (prefers-reduced-motion: no-preference) {
+  .veriface-admin .admin-nav-indicator { transition: transform 440ms cubic-bezier(.34,1.28,.45,1); }
+  .veriface-admin .vf-family-card { transition: transform 360ms cubic-bezier(.34,1.35,.45,1), background-color 180ms, border-color 180ms, box-shadow 240ms; }
+  .veriface-admin .admin-linked-track i { transition: width 320ms cubic-bezier(.22,.8,.25,1); }
+  .veriface-admin .admin-metric-link:hover span { transform: translate(2px,-2px); }
+  .veriface-admin .admin-metric-link span { transition: transform 180ms; }
+}
+
+.veriface-admin .vf-family-card.is-selected::after { content: ''; position: absolute; right: 14px; bottom: 14px; width: 7px; height: 7px; border-radius: 50%; background: #d3b8ff; box-shadow: 0 0 0 5px #b189ed20; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .veriface-admin .vf-family-card.is-selected { transform: translateY(-6px); box-shadow: 0 16px 32px #09031370, 0 0 0 1px #b796ff88; }
+  .veriface-admin .admin-linked-distribution > button { transition: transform 220ms cubic-bezier(.34,1.35,.45,1), background-color 150ms, border-color 150ms; }
+  .veriface-admin .admin-linked-distribution > button[aria-pressed=true] { transform: translateY(-3px); }
+  .veriface-admin .admin-family-select:active { transform: scale(.96); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .veriface-admin .vf-family-card:not(.is-selected):hover { transform: translateY(-3px); border-color: #8e6eb1; }
+  .veriface-admin .admin-linked-distribution > button:hover { transform: translateY(-3px); }
+}
+.veriface-admin .vf-family-card:focus-within { border-color: #b796ff; }
