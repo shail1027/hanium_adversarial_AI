@@ -1,0 +1,129 @@
+.veriface-admin { --admin-bg: #100e1b; --admin-panel: #211b33; --admin-line: #332a48; --admin-muted: #aba3bd; --admin-primary: #8b5cf6; color: #f4f1fa; background: var(--admin-bg); min-height: 100dvh; font: 14px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; color-scheme: dark; text-align: left; }
+.veriface-admin *, .veriface-admin *::before, .veriface-admin *::after { box-sizing: border-box; }
+.veriface-admin :is(h1,h2,h3,p,dl,dd) { margin: 0; }
+.veriface-admin :is(h1,h2,h3) { color: #f4f1fa; font-family: inherit; }
+.veriface-admin table { background: transparent; }
+.veriface-admin td { color: #f4f1fa; border-bottom: 1px solid var(--admin-line); }
+.veriface-admin h1 { font-size: 32px; line-height: 1.3; letter-spacing: -.04em; margin: 8px 0; }
+.veriface-admin h2 { font-size: 18px; line-height: 1.4; letter-spacing: -.02em; }
+.veriface-admin h3 { font-size: 14px; }
+.veriface-admin button, .veriface-admin select { font: inherit; color: inherit; background: #2b2340; border: 1px solid var(--admin-line); border-radius: 10px; min-height: 44px; padding: 8px 12px; cursor: pointer; box-shadow: none; letter-spacing: normal; text-transform: none; }
+.veriface-admin button:hover { background: #3a2d55; border-color: #a780f7; }
+.veriface-admin :is(button,a,select,summary,[tabindex]):focus-visible { outline: 3px solid #c4a5ff; outline-offset: 3px; }
+.veriface-admin button[aria-pressed=true] { background: #51319a; border-color: #ad87ff; }
+.veriface-admin a { color: #c8adff; }
+.veriface-admin .admin-sidebar { width: 224px; position: fixed; inset: 0 auto 0 0; background: #171323; border-right: 1px solid var(--admin-line); padding: 32px 16px 24px; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; }
+.veriface-admin .admin-brand { display: flex; align-items: center; gap: 8px; padding: 0 8px 36px; }
+.veriface-admin .admin-brand strong { font-size: 24px; letter-spacing: -.03em; }
+.veriface-admin .admin-brand small { display: block; font-size: 9px; letter-spacing: .12em; color: var(--admin-muted); }
+.veriface-admin .admin-sidebar nav { display: grid; gap: 8px; }
+.veriface-admin .admin-sidebar nav button { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 56px; border-color: transparent; background: transparent; color: #c3b8d8; text-align: left; font-size: 15px; padding: 12px 16px; }
+.veriface-admin .admin-sidebar nav button[aria-current=page] { background: linear-gradient(110deg,#7044d9,#5028ab); color: #fff; box-shadow: 0 8px 24px #06020e40; }
+.veriface-admin .admin-sidebar nav button:hover { background-color: #2b2140; }
+.veriface-admin .admin-sidebar-footer { margin-top: auto; padding: 28px 8px 0; color: var(--admin-muted); font-size: 12px; }
+.veriface-admin .admin-sidebar-footer p { margin: 8px 0 20px; }
+.veriface-admin .admin-sidebar-footer button { width: 100%; background: transparent; text-align: left; }
+.veriface-admin .admin-main { margin-left: 224px; padding: 32px; min-width: 0; max-width: 2200px; }
+.veriface-admin .admin-header { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+.veriface-admin .admin-header p { color: #bdb3cf; }
+.veriface-admin .admin-eyebrow { font-size: 10px; letter-spacing: .18em; }
+.veriface-admin .admin-profile { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.veriface-admin .admin-profile small { display: block; color: var(--admin-muted); font-size: 11px; }
+.veriface-admin .admin-source-badge { border: 1px solid #7950be; border-radius: 8px; color: #c9a9ff; font-size: 12px; padding: 6px 10px; margin-right: 8px; }
+.veriface-admin .admin-avatar { border-radius: 50%; background: #40305e; color: #ddc8ff; display: grid; place-items: center; width: 40px; height: 40px; font-weight: 700; }
+.veriface-admin .admin-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+.veriface-admin .vf-stat-card { background: linear-gradient(120deg,#261e3b,#1b1729); border: 1px solid #403255; border-radius: 16px; padding: 24px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.veriface-admin .vf-stat-card > span { color: #cfc4df; display: flex; gap: 12px; align-items: center; font-size: 13px; }
+.veriface-admin .vf-stat-card svg { color: #b18afc; }
+.veriface-admin .vf-stat-card > strong { font-size: 28px; line-height: 1.4; font-variant-numeric: tabular-nums; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.veriface-admin .vf-stat-card strong.metric-ratio { font-size: 24px; }
+.veriface-admin .vf-stat-card small { color: var(--admin-muted); font-size: 11px; }
+.veriface-admin .admin-overview-grid { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 20px; align-items: start; }
+.veriface-admin .admin-primary, .veriface-admin .admin-context { min-width: 0; }
+.veriface-admin .vf-panel, .veriface-admin .vf-detail-panel { min-width: 0; border: 1px solid var(--admin-line); background: #1c172b; border-radius: 18px; padding: 24px; margin-bottom: 20px; box-shadow: 0 8px 32px #08050f18; }
+.veriface-admin .vf-section-heading, .veriface-admin .vf-detail-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.veriface-admin .vf-section-heading p { font-size: 11px; color: var(--admin-muted); letter-spacing: .04em; overflow-wrap: anywhere; }
+.veriface-admin .vf-section-heading h2 { margin-top: 4px; }
+.veriface-admin .vf-muted, .veriface-admin .admin-table-note { color: var(--admin-muted); font-size: 12px; margin: 12px 0; }
+.veriface-admin .admin-table-note { margin: 20px 0 0; }
+.veriface-admin .vf-table-wrap { display: block; max-width: 100%; width: 100%; overflow: auto; border: 1px solid var(--admin-line); border-radius: 12px; }
+.veriface-admin table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 12px; white-space: nowrap; text-align: left; }
+.veriface-admin th { position: static; text-transform: none; border-bottom: 1px solid var(--admin-line); background: #2a213d; color: #c9b8e5; font-weight: 500; padding: 14px 16px; }
+.veriface-admin td { padding: 16px; border-top: 1px solid #332a4866; max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.veriface-admin tr.selected { background: #392751; }
+.veriface-admin tbody tr:hover { background: #292038; }
+.veriface-admin .admin-family-icon { display: inline-flex; vertical-align: middle; color: #b793ff; background: #34254d; border-radius: 8px; padding: 6px; margin-right: 12px; }
+.veriface-admin .vf-pill { display: inline-block; padding: 4px 10px; background: #352748; color: #dac3ff; border: 1px solid #58416f; border-radius: 8px; font-size: 11px; white-space: nowrap; }
+.veriface-admin .vf-risk-critical { color: #ffb0c4; background-color: #472537; }
+.veriface-admin .vf-risk-high { color: #ffdb9e; background-color: #413523; }
+.veriface-admin .vf-risk-medium { color: #d6b7ff; background-color: #352748; }
+.veriface-admin .vf-risk-low { color: #a0e3ce; background-color: #1e3b35; }
+.veriface-admin .vf-empty-state { text-align: center; padding: 20px 12px; color: var(--admin-muted); }
+.veriface-admin .vf-empty-state h3 { font-size: 15px; color: #ded5ec; margin: 12px 0 8px; }
+.veriface-admin .vf-empty-state button { margin-top: 20px; color: #d1b8ff; }
+.veriface-admin .vf-empty-icon { font-size: 32px; color: #a17dc9; }
+.veriface-admin .admin-review-item { background: #241d35; border: 1px solid #3a2c50; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.veriface-admin .admin-review-item > span { font-size: 11px; color: #efc27b; }
+.veriface-admin .admin-review-item h3 { margin: 4px 0; }
+.veriface-admin .admin-review-item p { color: var(--admin-muted); font-size: 12px; }
+.veriface-admin .admin-context > .vf-panel { padding: 20px; }
+.veriface-admin .admin-context .vf-panel > button { width: 100%; background: transparent; color: #c9a9ff; font-size: 12px; }
+.veriface-admin .admin-recent { list-style: none; padding: 0; margin: 0 0 12px; }
+.veriface-admin .admin-recent li { display: grid; justify-items: start; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--admin-line); }
+.veriface-admin .admin-recent strong { font-size: 12px; overflow-wrap: anywhere; }
+.veriface-admin .admin-recent small { color: var(--admin-muted); font-size: 10px; }
+.veriface-admin .admin-source-note { color: var(--admin-muted); font-size: 11px; display: flex; gap: 12px; padding: 4px 16px; }
+.veriface-admin .admin-notice { padding: 16px 20px; margin: 0 0 24px; background: #271e39; border: 1px solid #594373; border-radius: 12px; color: #d0c2e2; font-size: 13px; }
+.veriface-admin .admin-footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--admin-muted); padding-top: 20px; }
+.veriface-admin .admin-menu-toggle { display: none; }
+.veriface-admin .admin-skip { position: fixed; top: -100px; left: 20px; z-index: 20; padding: 12px; background: #33204f; }
+.veriface-admin .admin-skip:focus { top: 12px; }
+.veriface-admin .admin-controls { display: flex; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
+.veriface-admin .admin-controls label { display: grid; gap: 8px; }
+.veriface-admin .vf-detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 16px 0; }
+.veriface-admin .vf-detail-grid dt { font-size: 11px; color: var(--admin-muted); overflow-wrap: anywhere; }
+.veriface-admin .vf-detail-grid dd { color: #f4f1fa; font-family: inherit; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.veriface-admin details { border-top: 1px solid var(--admin-line); margin-top: 16px; padding-top: 8px; }
+.veriface-admin summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: #cbb1f4; }
+.veriface-admin .vf-gate-list { display: grid; gap: 16px; }
+.veriface-admin .vf-gate-card { background: #241d34; border: 1px solid var(--admin-line); border-radius: 12px; padding: 20px; }
+.veriface-admin .vf-gate-card h3 { overflow-wrap: anywhere; }
+.veriface-admin .vf-gate-card small { color: var(--admin-muted); }
+.veriface-admin .vf-source-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; margin-bottom: 24px; }
+.veriface-admin .vf-source-list p { color: var(--admin-muted); margin-top: 8px; }
+.veriface-admin .vf-family-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
+.veriface-admin .vf-family-card { padding: 16px; border: 1px solid var(--admin-line); border-radius: 12px; min-width: 0; }
+.veriface-admin .vf-family-title { display: grid; gap: 12px; }
+.veriface-admin .vf-family-title span { display: block; color: var(--admin-muted); font-size: 11px; }
+.veriface-admin .vf-metric-row { display: flex; justify-content: space-between; gap: 8px; margin: 12px 0; font-size: 12px; }
+.veriface-admin .vf-bar-track, .veriface-admin .vf-stacked-bar { display: flex; height: 6px; overflow: hidden; background: #352b45; border-radius: 4px; margin: 12px 0; }
+.veriface-admin .vf-bar-track > span { background: #9970ec; }
+.veriface-admin .vf-stacked-bar .vf-risk-critical { background: #da7598; }
+.veriface-admin .vf-stacked-bar .vf-risk-high { background: #c4a261; }
+.veriface-admin .vf-stacked-bar .vf-risk-medium { background: #9970ec; }
+.veriface-admin .vf-stacked-bar .vf-risk-low { background: #5aa38d; }
+.veriface-admin .vf-risk-legend { display: flex; gap: 8px; flex-wrap: wrap; font-size: 10px; color: var(--admin-muted); }
+.veriface-admin .vf-filters { display: grid; gap: 12px; margin: 20px 0; }
+.veriface-admin .vf-filters > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.veriface-admin .vf-filters > div > span { min-width: 160px; color: var(--admin-muted); }
+.veriface-admin .vf-session-layout { display: grid; grid-template-columns: minmax(0,1fr); gap: 24px; }
+.veriface-admin .vf-detail-panel { background: #241c34; margin: 0; }
+.veriface-admin .vf-identity-route { display: flex; gap: 16px; flex-wrap: wrap; }
+.veriface-admin .vf-rule-list article { border-top: 1px solid var(--admin-line); padding: 12px 0; }
+.veriface-admin .vf-rule-list article span { margin-left: 12px; color: var(--admin-muted); }
+.veriface-admin .vf-rule-list p { color: var(--admin-muted); font-size: 12px; }
+.veriface-admin .vf-evidence-paths code { display: block; color: #c6b1de; overflow-wrap: anywhere; font-size: 11px; margin-top: 8px; }
+.veriface-admin .vf-secondary-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.veriface-admin .vf-timeline-list { list-style: none; padding: 0; margin: 0; }
+.veriface-admin .vf-timeline-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-bottom: 1px solid var(--admin-line); padding: 12px 0; font-size: 11px; }
+.veriface-admin .vf-tooltip { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; border: 1px solid #78628b; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; }
+.veriface-admin .vf-tooltip > span { display: none; position: absolute; top: 22px; left: 0; z-index: 5; width: 200px; white-space: normal; background: #352747; border: 1px solid #78628b; padding: 12px; color: #f4f1fa; }
+.veriface-admin .vf-tooltip:hover > span, .veriface-admin .vf-tooltip:focus > span { display: block; }
+@media (min-width: 1600px) { .veriface-admin .vf-session-layout { grid-template-columns: minmax(0,1fr) 380px; } }
+@media (max-width: 1279px) { .veriface-admin .admin-overview-grid { grid-template-columns: minmax(0,1fr); } .veriface-admin .admin-context { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; } .veriface-admin .admin-main { padding: 24px; } .veriface-admin .admin-source-badge { display: none; } .veriface-admin .vf-family-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 760px) { .veriface-admin .admin-sidebar { position: relative; width: 100%; padding: 16px; display: grid; grid-template-columns: 1fr auto; align-items: center; } .veriface-admin .admin-brand { padding: 0; } .veriface-admin .admin-brand strong { font-size: 21px; } .veriface-admin .admin-sidebar nav { display: none; grid-column: 1/-1; margin-top: 16px; } .veriface-admin .admin-sidebar nav.is-open { display: grid; } .veriface-admin .admin-sidebar-footer { grid-column: 1/-1; margin: 0; padding: 12px 0 0; } .veriface-admin .admin-sidebar-footer > span, .veriface-admin .admin-sidebar-footer p { display: none; } .veriface-admin .admin-sidebar-footer button { min-height: 44px; padding: 8px; text-align: right; font-size: 12px; } .veriface-admin .admin-menu-toggle { display: block; } .veriface-admin .admin-main { margin: 0; padding: 24px 16px; } .veriface-admin .admin-header { align-items: flex-start; } .veriface-admin h1 { font-size: 28px; } .veriface-admin .admin-profile { display: none; } .veriface-admin .admin-metrics, .veriface-admin .admin-context, .veriface-admin .vf-source-list, .veriface-admin .vf-secondary-grid { grid-template-columns: minmax(0,1fr); } .veriface-admin .vf-stat-card { padding: 20px; } .veriface-admin .vf-panel { padding: 20px 16px; } .veriface-admin .vf-family-grid, .veriface-admin .vf-detail-grid { grid-template-columns: minmax(0,1fr); } .veriface-admin .admin-header p { font-size: 12px; } .veriface-admin .admin-context { gap: 0; } .veriface-admin .vf-gate-card { padding: 16px; } }
+@media (prefers-reduced-motion: no-preference) { .veriface-admin button { transition: background-color 150ms, border-color 150ms; } }
+
+.veriface-admin .vf-table-wrap { max-height: 560px; }
+.veriface-admin .admin-header h1 { scroll-margin-top: 32px; }
+.veriface-admin .vf-tooltip { color: #cbb1f4; }
