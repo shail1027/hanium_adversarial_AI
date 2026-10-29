@@ -17,6 +17,7 @@ export function useTransfer() {
   const [loadingContext, setLoadingContext] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
   const [challenge, setChallenge] = useState('');
   const [illumination, setIllumination] = useState('');
   const [result, setResult] = useState<FaceAuthVerifyResponse | null>(null);
@@ -81,7 +82,7 @@ export function useTransfer() {
     active.current = attempt;
     const { signal } = attempt.controller;
     const ensureCurrent = () => { signal.throwIfAborted(); if (active.current !== attempt) throw new DOMException('취소됨', 'AbortError'); };
-    setWorking(true); setError(null); setResult(null); setChallenge('카메라를 준비하고 있어요.');
+    setProcessingStatus('카메라 준비 중'); setWorking(true); setError(null); setResult(null); setChallenge('카메라를 준비하고 있어요.');
     attempt.timer = window.setTimeout(() => {
       if (active.current !== attempt) return;
       stop(); setWorking(false); setIllumination(''); setError('촬영 시간이 초과되었어요. 다시 시도해 주세요.');
@@ -95,12 +96,13 @@ export function useTransfer() {
       if (!video) throw new Error('카메라 화면을 열지 못했어요.');
       video.srcObject = stream;
       await video.play(); ensureCurrent();
+      setProcessingStatus('촬영 준비 중');
       const session = await startFaceAuth(operation, attempt.csrf, signal);
       attempt.session = session;
       if (signal.aborted || active.current !== attempt) { void cancelFaceSession(session, attempt.csrf).catch(() => undefined); ensureCurrent(); }
       if (!ledger.current.bind(request, session.session_id)) throw new Error('현재 송금의 인증 세션을 확인하지 못했어요.');
       // Commit the actual instruction DOM before the shared two-animation-frame ACK protocol.
-      flushSync(() => setChallenge(session.challenge));
+      flushSync(() => { setChallenge(session.challenge); setProcessingStatus('얼굴 촬영 중'); });
       const displayedAt = await waitForPaint(signal);
       ensureCurrent();
       const plan = await presentFaceChallenge(session, displayedAt, attempt.csrf, signal);
@@ -116,6 +118,7 @@ export function useTransfer() {
       });
       ensureCurrent();
       stream.getTracks().forEach(track => track.stop()); video.srcObject = null;
+      setProcessingStatus(operation === 'enroll' ? '얼굴 등록 확인 중' : '얼굴 인증 확인 중');
       const outcome = await verifyFaceAuth(session, attempt.csrf, signal);
       ensureCurrent();
       if (operation === 'enroll') {
@@ -128,6 +131,7 @@ export function useTransfer() {
         setResult(outcome);
         if (!ledger.current.accept(request, outcome)) throw new Error(outcome.session.final_decision === 'STEP_UP' ? '추가 확인이 필요해 송금하지 않았어요. 추가 인증 수단은 아직 연결되지 않았어요.' : '얼굴 인증을 승인받지 못했어요. 송금하지 않았어요.');
         const token = outcome.token_id!;
+        setProcessingStatus('송금 승인 확인 중');
         const consumed = await consumeFaceToken(session.session_id, token, attempt.csrf, signal);
         ensureCurrent();
         const completed = ledger.current.complete(request, token, consumed);
@@ -144,5 +148,5 @@ export function useTransfer() {
       }
     }
   }
-  return { screen, setScreen, draft, setDraft, receipt, balance: ledger.current.balance, transactions: ledger.current.transactions, context, loadingContext, reloadContext, error, working, challenge, illumination, result, videoRef, submitDraft, openCapture, capture, cancel };
+  return { screen, setScreen, draft, setDraft, receipt, balance: ledger.current.balance, transactions: ledger.current.transactions, context, loadingContext, reloadContext, error, working, processingStatus, challenge, illumination, result, videoRef, submitDraft, openCapture, capture, cancel };
 }

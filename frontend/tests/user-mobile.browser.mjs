@@ -40,6 +40,8 @@ try {
   await page.getByRole('alert').filter({hasText:'권한'}).waitFor();
   assert.equal(await page.evaluate(()=>window.cameraRequests),1);
   assert.equal(await page.getByRole('heading',{name:'송금 완료'}).count(),0);
+  await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
+  await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
   await page.getByRole('button',{name:'홈으로 돌아가기'}).click();
   assert.equal(await page.locator('.vf-user__balance').innerText(),'2,450,000원');
   await page.getByText('아직 송금 내역이 없어요').waitFor();

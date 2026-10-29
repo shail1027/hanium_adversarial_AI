@@ -108,3 +108,41 @@
 @media (min-width: 600px) { .vf-user .vf-user__shell { box-shadow: 0 0 80px #0005; border-left: 1px solid var(--vf-line); border-right: 1px solid var(--vf-line); } }
 @media (max-width: 374px) { .vf-user .vf-user__header { padding-left: 20px; padding-right: 20px; } .vf-user .vf-user__main { padding-left: 20px; padding-right: 20px; } .vf-user .vf-user__camera { height: 260px; } }
 @media (prefers-reduced-motion: reduce) { .vf-user *, .vf-user *::before, .vf-user *::after { scroll-behavior: auto; animation: none; transition: none; } }
+
+/* Finite interaction feedback; no layout animation or persistent decoration. */
+.vf-user { overflow-x: clip; }
+.vf-user button { transition: transform 120ms ease, background-color 160ms ease, border-color 160ms ease; }
+.vf-user button:active:not(:disabled) { transform: scale(.97); }
+.vf-user button:disabled { cursor: default; }
+.vf-user button[aria-busy="true"] { opacity: 1; background: #33264d; color: #d4c9e5; gap: 10px; }
+.vf-user .vf-user__nav button { transition: color 160ms ease, background-color 160ms ease, transform 120ms ease; }
+.vf-user input { transition: border-color 160ms ease, background-color 160ms ease; }
+.vf-user input:focus { border-color: #b58cff; background-color: #292039; }
+.vf-user .vf-user__amount-field { transition: border-color 160ms ease, box-shadow 160ms ease; }
+.vf-user .vf-user__amount-field:focus-within { border-color: #b58cff; box-shadow: 0 0 0 3px #8b5cf61f; }
+.vf-user .vf-user__amount-field input { font-variant-numeric: tabular-nums; letter-spacing: -.035em; background: transparent; }
+.vf-user .vf-user__error { animation: vf-error-in 160ms ease-out; }
+.vf-user .vf-user__success path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.vf-user .vf-user__loading { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.vf-user .vf-user__spinner { display: inline-block; flex: 0 0 18px; width: 18px; height: 18px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: vf-spin 800ms linear infinite; }
+@keyframes vf-spin { to { transform: rotate(360deg); } }
+@keyframes vf-error-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (hover: hover) and (pointer: fine) {
+  .vf-user button:hover:not(:disabled) { background-color: #39294f; }
+  .vf-user .vf-user__primary:hover:not(:disabled) { border-color: #c4a0ff; }
+  .vf-user .vf-user__recipients button:hover:not(:disabled) { background-color: #211b33; }
+}
+/* Locked from camera request through verify/consume, including ancestors and pseudo-elements.
+   WAAPI screen animations are also canceled by useUserMotion before paint. */
+.vf-user.vf-user--working, .vf-user.vf-user--working *, .vf-user.vf-user--working *::before, .vf-user.vf-user--working *::after {
+  animation: none !important;
+  transition: none !important;
+  filter: none !important;
+}
+.vf-user.vf-user--working button:active { transform: none; }
+.vf-user.vf-user--working .vf-user__shell { background: transparent; box-shadow: none; }
+.vf-user.vf-user--working .vf-user__primary { background: #33264d; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .vf-user *, .vf-user *::before, .vf-user *::after { animation: none !important; transition: none !important; }
+  .vf-user button:active:not(:disabled) { transform: none; }
+}

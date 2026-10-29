@@ -117,3 +117,50 @@ App.tsx 연결과 관리자 동시 렌더 회귀 검증은 최종 통합 단계�
 후속 사용자 요청에 따라 시연 모드 배지와 각 화면의 시연·실제 이체 안내 문구를 제거했다.
 계좌·잔액·송금 일시·내 정보는 일반 서비스 문구로 표시한다. 실제 금융 API가 없는 구조와
 인증·토큰 소비 조건은 그대로이며, 이 문서의 구현 제약은 여전히 유효하다.
+
+## 모션 및 상호작용 — 2026-10-29
+
+- `useUserMotion.ts`: 한 개의 mounted main에 WAAPI transform/opacity로 220ms 진입 효과.
+  홈→입력→확인은 +18px, 이전 단계 복귀는 -18px. 나가는 DOM 복제/잔류 없음.
+  뒤로 버튼은 확인→입력, 촬영→확인으로 복귀하며 draft를 보존한다.
+- 버튼: 120ms scale(.97) 눌림, 160ms 메뉴 활성색·포커스/테두리 반응.
+  hover는 hover:hover/pointer:fine에서만. 금액 입력값과 커서에는 애니메이션 없음.
+  오류는 160ms 한 번 나타나며 흔들림 없음.
+- 실제 비동기 상태만 준비/촬영/등록 확인/인증 확인/소비 승인 확인으로 표시.
+  카메라 시작부터 consume 종료까지 busy 버튼은 disabled, 취소는 enabled.
+  context 조회 중에만 회전 로딩을 표시하고, 촬영 요청 동안 spinner는 정지 상태다.
+- 현재 검증된 receipt에만 240ms 체크 배지와 360ms 체크 선 그리기.
+  receipt ID를 기억하여 1회 재생. 홈의 새 거래 행은 최초 표시 때만 240ms 등장하며
+  다른 탭에서 돌아와도 이전 거래 행은 다시 재생하지 않는다.
+  잔액 카운트업은 넣지 않았고 실제 확정값만 즉시 표시한다.
+- `working`이 true인 전체 요청 구간에 root의 `vf-user--working` 적용.
+  useLayoutEffect cleanup으로 WAAPI 취소, 전체 하위/의사 요소의 CSS animation/transition/filter를
+  비활성화하며 버튼 눌림 변형도 중지한다. 촬영 화면은 화면 전환에서 제외한다.
+  카메라 stream, 두 RAF, present ACK, RGB, 프레임·토큰 계약은 변경하지 않았다.
+- reduced-motion에서 WAAPI 재생 없음, CSS 애니메이션/전환/눌림 이동 없음.
+  OS 설정 변경도 감지해 실행 중인 WAAPI를 즉시 취소한다. 이벤트 리스너와 animation은
+  effect cleanup으로 해제한다. 모션용 상시 타이머나 성공 판정 타이머는 추가하지 않았다.
+- 화면 이동 때만 제목에 focus, 입력 변경·요청 진행 때는 focus를 이동하지 않는다.
+
+브라우저 검증 추가 명령:
+```sh
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs node frontend/tests/user-motion.browser.mjs
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs REDUCED_MOTION=1 node frontend/tests/user-auth.browser.mjs
+```
+`user-motion.browser.mjs`는 실제 Element.animate 호출의 방향·시간, computed pressed style,
+포커스·caret, 빠른 이동/연타/단일 DOM, 세 모바일 폭 overflow, 촬영 중 animation 0개,
+취소 후 늦은 카메라 응답, reduced-motion을 브라우저에서 검사한다.
+`user-auth.browser.mjs`는 모든 start/present/frame/verify/consume 요청 시 motion lock과
+실행 중 animation 0개를 확인하고 프레임 전송 시 배경이 서버 RGB/흰색 그대로임을 확인한다.
+등록 버튼 연타 시 세션 1개, receipt 효과 1회, 새 거래 효과 1회와 탭 복귀 시 미재생,
+비승인·소비 실패에서 성공 효과 0회를 확인한다. API·카메라는 명시적 대역이다.
+
+모션 녹화: `/tmp/veriface-user-motion/mobile-motion.webm`.
+Chrome CDP의 실제 화면 프레임 87개를 MediaRecorder로 기록했다(홈→입력→확인→뒤로→확인→촬영 대기).
+녹화에서는 카메라 시작·실제 인증을 실행하지 않았다. 완료 효과는 별도 API 대역 브라우저 검사다.
+미리보기: `http://127.0.0.1:5187/user-preview.html` (무시된 임시 진입점, 커밋 제외).
+
+최종 모션 검증 결과: node:test 17/17, TypeScript/Vite build, ESLint, diff-check 통과.
+일반/모션 감소 각각의 인증 대역 브라우저 검사와 기존 모바일 브라우저 검사 통과.
+독립 모션 검사는 360/390/430px·키프레임·포커스·입력·취소·감소 설정 모두 통과.
+WebM은 390×844 크기로 실제 디코딩/1초 이상 재생되며 video.error=null임을 확인했다.
