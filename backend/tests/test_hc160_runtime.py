@@ -1,4 +1,7 @@
-"""Real HC160 policy/storage tests; synthetic inference is explicitly substituted."""
+"""Real HC160 policy/storage tests; models and strict bundle verification are doubles.
+
+Strict bundle verification itself is exercised in test_strict_reference_runtime.
+"""
 import base64
 from datetime import timedelta
 import json
@@ -84,26 +87,23 @@ def run_evaluation(fixture, *, failed_gate=False, accepted=False):
     gates = [cli.GateResult(name, cli.GateStatus.FAIL if failed_gate and name == "passive_pad"
                            else cli.GateStatus.PASS, score=1., threshold=.6) for name in names]
     contributions = ()
+    references = {}
     if accepted:
         from src.face_auth.domain.graded_decision import ScoreContribution
         contributions = (ScoreContribution("synthetic", 0.), ScoreContribution("adversarial", 0.))
-        reference_path = runtime.config.directory / "references.json"
-        reference_path.write_text(json.dumps({
-            "margin": [0., .1, .2], "synthetic": [.1, .2, .3], "adversarial": [.1, .2, .3],
-        }))
-        original_args = runtime.config.args
-        def configured_args(*args):
-            result = original_args(*args)
-            result.decision_reference_distributions = str(reference_path)
-            return result
-        runtime.config.args = configured_args
+        from src.face_auth.domain.graded_decision import ReferenceDistribution
+        references = {axis: ReferenceDistribution(values) for axis, values in {
+            "margin": (0., .1, .2), "synthetic": (.1, .2, .3),
+            "adversarial": (.1, .2, .3),
+        }.items()}
     observation = SimpleNamespace(
         baseline=SimpleNamespace(total_frames=6, valid_face_frames=6),
         gate_results=gates, score_contributions=contributions,
     )
     pipeline = SimpleNamespace(evaluate=lambda *a, **k: observation)
     with patch.object(cli, "MTCNNFaceDetector"), patch.object(cli, "FaceNetEmbedder"), \
-            patch.object(cli, "_full_pipeline", return_value=pipeline):
+            patch.object(cli, "_full_pipeline", return_value=pipeline), \
+            patch.object(runtime, "_verified_references", return_value=references):
         result = runtime.evaluate(session.session_id, "alice", "127.0.0.1", frames, 1,
                                   illumination, template_path, calibration_path)
     return session, illumination, result
@@ -349,7 +349,8 @@ def test_explicit_synthetic_settings_reach_pipeline_and_policy_without_token(set
         return SimpleNamespace(evaluate=lambda *a, **k: observation)
 
     with patch.object(cli, "MTCNNFaceDetector"), patch.object(cli, "FaceNetEmbedder"), \
-            patch.object(cli, "_full_pipeline", side_effect=configured_pipeline):
+            patch.object(cli, "_full_pipeline", side_effect=configured_pipeline), \
+            patch.object(runtime, "_verified_references", return_value={}):
         result = runtime.evaluate(session.session_id, "alice", None, frames, 1,
                                   illumination, template_path, calibration_path)
     assert result["decision"] == "STEP_UP"

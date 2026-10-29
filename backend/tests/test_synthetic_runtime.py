@@ -1,8 +1,9 @@
 """Opt-in real SBI/RetinaFace runtime smoke on a public skimage example image.
 
 The actual web runtime, CLI FULL factory, synthetic loader/scorer and policy run.
-Baseline/PAD/other security gates are doubles; this does not test camera behavior,
-attack detection, calibration quality or successful FULL approval.
+Baseline/PAD/other security gates and strict reference verification are doubles.
+This does not test camera behavior, attack detection, calibration quality or
+successful FULL approval.
 """
 import os
 from contextlib import ExitStack
@@ -78,6 +79,7 @@ def test_actual_sbi_score_reaches_web_runtime_policy_without_reference(setup_run
             stack.enter_context(patch.object(cli, "FivePointHeadPoseEstimator", return_value=SimpleNamespace(
                 estimate=lambda *a: None)))
             stack.enter_context(patch.object(cli, "_full_pipeline", side_effect=full_pipeline))
+            stack.enter_context(patch.object(runtime, "_verified_references", return_value={}))
             for constructor, gate in (
                 ("CameraMotionGate", "camera_motion"), ("ContentReplayGate", "content_replay"),
                 ("IlluminationChallengeGate", "illumination_challenge"),

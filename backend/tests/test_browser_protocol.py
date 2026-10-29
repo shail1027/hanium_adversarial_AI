@@ -14,6 +14,7 @@ import pytest
 from backend.app.capture_service import CaptureError, CaptureService
 from backend.app.main import create_app
 from backend.app.model_adapter import ModelCliConfig
+from .test_model_config import strict_reference_settings
 
 
 class Clock:
@@ -56,10 +57,14 @@ class Runtime:
 def web(tmp_path, monkeypatch):
     monkeypatch.setenv("HC160_TEMPLATE_KEYS", "test-only-not-a-key")
     (tmp_path / "pad.onnx").touch(); (tmp_path / "pad.json").touch()
+    (tmp_path / "synthetic.tar").touch(); (tmp_path / "detector.pth").touch()
     config = ModelCliConfig(repo_path=str(tmp_path), storage_root=str(tmp_path), user_id="server-alice",
                             device_id="server-device", query_budget_db=str(tmp_path / "budget.sqlite"),
                             pad_model=str(tmp_path / "pad.onnx"), pad_registry=str(tmp_path / "pad.json"),
-                            threshold="0.6", threshold_version="test-only", template_key_id="key")
+                            threshold="0.6", threshold_version="test-only", template_key_id="key",
+                            synthetic_model=str(tmp_path / "synthetic.tar"),
+                            synthetic_detector_model=str(tmp_path / "detector.pth"),
+                            **strict_reference_settings(tmp_path))
     clock, runtime = Clock(), Runtime()
     app = create_app(config, runtime, clock)
     with TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 41000)) as client:
@@ -321,3 +326,32 @@ def test_private_attempt_logs_preserve_outcome_without_credentials(web, caplog, 
     encoded = json.dumps(events)
     for forbidden in ("one-use-test-token", session["nonce"], "server-alice", "private-error-detail", "image_bgr", "embedding"):
         assert forbidden not in encoded
+
+
+def test_missing_reference_allows_first_enrollment_but_blocks_registered_full_authentication(web):
+    client, service, runtime, _ = web
+    service.config = replace(service.config, reference_bundle="", reference_scores="",
+                             reference_contract="", reference_splits="", reference_protocol_id="")
+    # create_app and CaptureService normally share the same immutable config.
+    # Use a separate app so health/context see the same missing-reference snapshot.
+    app = create_app(service.config, runtime)
+    with TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 41001)) as check:
+        initial = check.get("/api/face/context").json()
+        assert initial["registered"] is False
+        assert initial["ready"] is True
+        assert initial["blockers"] == []
+        health = check.get("/api/health").json()
+        assert health["hc160_runtime_ready"] is False
+        assert "HC160_REFERENCE_BUNDLE" in health["hc160_runtime_missing"]
+    enrolled(web)
+    app = create_app(service.config, runtime)
+    with TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 41001)) as check:
+        context = check.get("/api/face/context").json()
+        assert context["registered"] is True
+        assert context["ready"] is False
+        assert "HC160_REFERENCE_BUNDLE" in context["blockers"]
+        check.headers["X-CSRF-Token"] = context["csrf_token"]
+        denied = check.post("/api/face/start", json={"operation": "authenticate"})
+        assert denied.status_code == 503
+        assert denied.json()["detail"]["code"] == "CONFIGURATION_REQUIRED"
+        assert "token_id" not in denied.json()

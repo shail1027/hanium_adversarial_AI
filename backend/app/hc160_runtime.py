@@ -129,6 +129,32 @@ class HC160Runtime:
             min_probe_frames=args.min_valid_frames,
         ).select(template=template, artifact_path=calibration_path)
 
+    def _verified_references(self, pipeline, args, template, calibration,
+                             calibration_artifact, calibration_sha256, calibration_path):
+        from src.common.reproducibility import sha256_file
+        from src.face_auth.evaluation.reference_artifact import ReferenceArtifactError
+        from src.face_auth.evaluation.reference_guard import load_verified_reference_bundle
+        from src.face_auth.evaluation.runtime_record import build_runtime_contract
+
+        required = ("decision_reference_bundle", "reference_scores", "reference_contract",
+                    "reference_splits", "evaluation_protocol_id")
+        if (getattr(args, "decision_reference_distributions", None)
+                or not all(getattr(args, name, None) for name in required)):
+            raise ReferenceArtifactError("STRICT_REFERENCE_CONFIGURATION_REQUIRED")
+        runtime_contract, _ = build_runtime_contract(pipeline, args.evaluation_protocol_id)
+        if sha256_file(calibration_path) != calibration_sha256:
+            raise ReferenceArtifactError("CALIBRATION_CHANGED_DURING_RUN")
+        references = load_verified_reference_bundle(
+            args.decision_reference_bundle, runtime_contract,
+            scores_path=args.reference_scores, contract_path=args.reference_contract,
+            splits_path=args.reference_splits, calibration=calibration_artifact,
+            calibration_provenance=calibration.provenance,
+            template_version=template.template_version,
+        )
+        if sha256_file(calibration_path) != calibration_sha256:
+            raise ReferenceArtifactError("CALIBRATION_CHANGED_DURING_RUN")
+        return references
+
     def evaluate(self, session_id, user_id, source_ip, frames,
                  challenge_start_frame_id, illumination, template_path, calibration_path):
         with self._lock:
@@ -168,7 +194,13 @@ class HC160Runtime:
             raise ValueError("Runtime requires FULL, SQLite and registered ONNX PAD")
         policy = cli._decision_policy_service(args)
         template = cli._template_repository(args).read(template_path, user_id=user_id)
+        from src.face_auth.application.registration_calibration import _parse_artifact
+        from src.face_auth.evaluation.reference_artifact import ReferenceArtifactError, _read
+        calibration_payload, calibration_sha256 = _read(calibration_path)
+        calibration_artifact = _parse_artifact(calibration_payload)
         calibration = self._bound_calibration(cli, args, template, calibration_path)
+        if cli.sha256_file(calibration_path) != calibration_sha256:
+            raise ReferenceArtifactError("CALIBRATION_CHANGED_DURING_SELECTION")
         detector = cli.MTCNNFaceDetector(device=args.device)
         embedder = cli.FaceNetEmbedder(device=args.device)
         baseline = cli.BaselineEvidencePipeline(
@@ -184,7 +216,8 @@ class HC160Runtime:
             raise ValueError("Capture manifest session/nonce/evidence binding failed")
         self.sessions.move(session.session_id, cli.SessionState.EVIDENCE_RECEIVED)
         self.sessions.move(session.session_id, cli.SessionState.EVALUATING)
-        full = cli._full_pipeline(args, baseline, embedder, template.embedding).evaluate(
+        pipeline = cli._full_pipeline(args, baseline, embedder, template.embedding)
+        full = pipeline.evaluate(
             frames, challenge_kind=session.challenge.kind,
             challenge_start_frame_id=challenge_start_frame_id,
             illumination_challenge=illumination, expected_nonce=session.challenge.nonce,
@@ -192,9 +225,9 @@ class HC160Runtime:
         contributions = getattr(full, "score_contributions", None)
         if contributions is None:
             contributions = (full.adversarial,) if full.adversarial is not None else ()
-        references = (
-            cli.load_reference_distributions(args.decision_reference_distributions)
-            if args.decision_reference_distributions else {}
+        references = self._verified_references(
+            pipeline, args, template, calibration, calibration_artifact,
+            calibration_sha256, calibration_path,
         )
         result = policy.evaluate(
             profile=cli.SecurityProfile.FULL, gate_results=list(full.gate_results),

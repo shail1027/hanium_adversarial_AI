@@ -15,6 +15,7 @@ from backend.app.model_adapter import ModelCliConfig
 from backend.app.hc160_runtime import HC160Runtime
 from .test_browser_protocol import Clock, capture
 from .test_face_api_schema import validate_face_response
+from .test_model_config import strict_reference_settings
 
 
 @pytest.mark.skipif(not os.getenv("HC160_TEST_REPO"), reason="HC160_TEST_REPO required")
@@ -23,10 +24,15 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
     monkeypatch.setenv("HC160_TEMPLATE_KEYS", json.dumps({"test-key": base64.b64encode(b"k" * 32).decode()}))
     pad = tmp_path / "unused-test-pad.onnx"
     pad.touch()  # Full inference is the explicit test seam below, not model validation.
+    (tmp_path / "synthetic.tar").touch()
+    (tmp_path / "detector.pth").touch()
     config = ModelCliConfig(repo_path=str(repo), storage_root=str(tmp_path), user_id="fixed-server-user",
                             device_id="fixed-device", query_budget_db=str(tmp_path / "shared.sqlite"),
                             pad_model=str(pad), pad_registry=str(repo / "configs/models/anti-spoof-mn3.json"),
-                            threshold="0.6", threshold_version="test-only", template_key_id="test-key")
+                            threshold="0.6", threshold_version="test-only", template_key_id="test-key",
+                            synthetic_model=str(tmp_path / "synthetic.tar"),
+                            synthetic_detector_model=str(tmp_path / "detector.pth"),
+                            **strict_reference_settings(tmp_path))
     runtime = HC160Runtime(config)
     cli = runtime._load()
     clock = Clock()
@@ -46,10 +52,13 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
         gates.append(cli.GateResult("adversarial", cli.GateStatus.SCORED, score=.25))
         return SimpleNamespace(baseline=SimpleNamespace(total_frames=len(frames), valid_face_frames=len(frames)),
                                gate_results=gates, adversarial=None)
+    # This HTTP/session/policy regression substitutes inference AND strict reference
+    # verification. Real guard success/failure coverage lives in test_strict_reference_runtime.
     with patch.object(cli, "MTCNNFaceDetector", return_value=detector), \
          patch.object(cli, "FaceNetEmbedder", return_value=embedder), \
          patch.object(cli, "_quality_gate", return_value=quality), \
          patch.object(cli, "_full_pipeline", return_value=SimpleNamespace(evaluate=pipeline)), \
+         patch.object(runtime, "_verified_references", return_value={}), \
          TestClient(app, base_url="http://127.0.0.1", client=("127.0.0.1", 41000)) as client:
         client.headers["X-CSRF-Token"] = client.get("/api/face/context").json()["csrf_token"]
         web = (client, app.state.capture_service, runtime, clock)

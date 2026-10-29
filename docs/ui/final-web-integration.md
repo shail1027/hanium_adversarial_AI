@@ -1,5 +1,7 @@
 # 최종 웹 통합 실행 및 검증
 
+후속 최종 backend 연결·strict reference 실행 지침은 [FINAL_WEB_CAPTURE_RUNBOOK.md](FINAL_WEB_CAPTURE_RUNBOOK.md)를 따른다. 아래 내용은 UI 통합 당시 기록이다.
+
 ## 소스와 통합 경계
 
 브랜치: `codex/final-web-integration`.

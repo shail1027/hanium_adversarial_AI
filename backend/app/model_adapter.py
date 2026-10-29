@@ -26,6 +26,12 @@ class ModelCliConfig:
     threshold_version: str = ""
     template_key_id: str = ""
     reference_distributions: str = ""
+    reference_bundle: str = ""
+    reference_scores: str = ""
+    reference_contract: str = ""
+    reference_splits: str = ""
+    reference_protocol_id: str = ""
+    l3_defense_score: bool = False
     timeout_seconds: float = 60.0
 
     @classmethod
@@ -46,6 +52,12 @@ class ModelCliConfig:
             threshold_version=os.getenv("HC160_THRESHOLD_VERSION", ""),
             template_key_id=os.getenv("HC160_TEMPLATE_KEY_ID", ""),
             reference_distributions=os.getenv("HC160_REFERENCE_DISTRIBUTIONS", ""),
+            reference_bundle=os.getenv("HC160_REFERENCE_BUNDLE", ""),
+            reference_scores=os.getenv("HC160_REFERENCE_SCORES", ""),
+            reference_contract=os.getenv("HC160_REFERENCE_CONTRACT", ""),
+            reference_splits=os.getenv("HC160_REFERENCE_SPLITS", ""),
+            reference_protocol_id=os.getenv("HC160_REFERENCE_PROTOCOL_ID", ""),
+            l3_defense_score=os.getenv("HC160_L3_DEFENSE_SCORE", "") == "1",
         )
 
     def missing_requirements(self, operation="authenticate"):
@@ -60,6 +72,13 @@ class ModelCliConfig:
                 "HC160_DEVICE_ID": self.device_id,
                 "VERIFACE_QUERY_BUDGET_DB": self.query_budget_db,
                 "HC160_PAD_MODEL": self.pad_model, "HC160_PAD_REGISTRY": self.pad_registry,
+                "HC160_SYNTHETIC_MODEL": self.synthetic_model,
+                "HC160_SYNTHETIC_DETECTOR_MODEL": self.synthetic_detector_model,
+                "HC160_REFERENCE_BUNDLE": self.reference_bundle,
+                "HC160_REFERENCE_SCORES": self.reference_scores,
+                "HC160_REFERENCE_CONTRACT": self.reference_contract,
+                "HC160_REFERENCE_SPLITS": self.reference_splits,
+                "HC160_REFERENCE_PROTOCOL_ID": self.reference_protocol_id.strip(),
             })
         return [key for key, value in required.items() if not value]
 
@@ -75,10 +94,18 @@ class ModelCliConfig:
             value = getattr(self, name)
             if value and not Path(value).is_dir():
                 errors.append(f"{name}: directory missing")
-        for name in (("pad_model", "pad_registry", "reference_distributions") if auth else ()):
+        for name in (("pad_model", "pad_registry", "reference_scores", "reference_contract", "reference_splits") if auth else ()):
             value = getattr(self, name)
             if value and (not Path(value).is_absolute() or not Path(value).is_file()):
                 errors.append(f"{name}: absolute file required")
+        if auth and not self.l3_defense_score:
+            errors.append("HC160_L3_DEFENSE_SCORE: deterministic defense score must be explicitly enabled")
+        if auth and self.reference_distributions:
+            errors.append("HC160_REFERENCE_DISTRIBUTIONS: raw references are not supported; strict bundle required")
+        if auth and self.reference_bundle:
+            bundle = Path(self.reference_bundle)
+            if not bundle.is_absolute() or not bundle.is_dir():
+                errors.append("reference_bundle: absolute directory required")
         if auth and (self.synthetic_model or self.synthetic_detector_model):
             if not self.synthetic_model or not self.synthetic_detector_model:
                 errors.append("HC160_SYNTHETIC_MODEL / HC160_SYNTHETIC_DETECTOR_MODEL: complete pair required")
@@ -137,8 +164,12 @@ class ModelCliConfig:
             "--query-budget-config", str(root / "configs/decision/query_budget_v1.json"),
             "--template-audit-log", str(Path(self.storage_root) / "template-audit.jsonl"),
             *(["--source-ip", source_ip] if source_ip else []),
-            *(["--decision-reference-distributions", self.reference_distributions]
-              if self.reference_distributions else []),
+            *(["--decision-reference-bundle", self.reference_bundle] if self.reference_bundle else []),
+            *(["--reference-scores", self.reference_scores] if self.reference_scores else []),
+            *(["--reference-contract", self.reference_contract] if self.reference_contract else []),
+            *(["--reference-splits", self.reference_splits] if self.reference_splits else []),
+            *(["--evaluation-protocol-id", self.reference_protocol_id] if self.reference_protocol_id else []),
+            *(["--l3-defense-score"] if self.l3_defense_score else []),
         ])
         args.template_key_id = self.template_key_id
         return args
