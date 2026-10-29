@@ -1,6 +1,8 @@
 import { openUserPreview } from './app-browser-helper.mjs';
 // Transport/camera stubs only: no real face, camera, backend, or FULL approval.
 import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const browser = await chromium.launch({ headless:true,channel:process.env.BROWSER_CHANNEL || 'chrome',args:['--disable-gpu'] });
 const reduced = process.env.REDUCED_MOTION === '1';
@@ -29,34 +31,66 @@ await page.addInitScript(()=>{
 });
 let registered=false, operation, session=0, decision='ACCEPT', consumed=true, mismatch=false, holdConsume=false, releaseConsume;
 let consumeCount=0, networkFailure, holdVerify=false, releaseVerify;
+const frameRecords=[];
+let runPassed=false;
+function frameReport() {
+  const attempts=[...new Set(frameRecords.map(record=>record.attempt))].map(attempt=>{
+    const records=frameRecords.filter(record=>record.attempt===attempt);
+    const gaps=records.slice(1).map((record,index)=>record.timestamp_ms-records[index].timestamp_ms);
+    const durations=records.map(record=>record.route_duration_ms).filter(Number.isFinite);
+    return {attempt,frame_count:records.length,
+      timestamp_gaps_ms:gaps,
+      route_durations_ms:durations,
+      max_timestamp_gap_ms:gaps.length?Math.max(...gaps):null,
+      max_route_duration_ms:durations.length?Math.max(...durations):null};
+  });
+  return {passed:runPassed,reduced_motion:reduced,capture_duration_ms:3000,max_frames:80,
+    minimum_frames:10,clock:'native performance.now / requestAnimationFrame',
+    scope:'API/camera transport doubles; no real camera or FULL approval',attempts};
+}
 await page.route('**/api/face/**',async route=>{
   const path=new URL(route.request().url()).pathname.split('/').pop();
-  let body={};
-  if(path==='context') body={mode:'local',registered,ready:true,user_label:'대역',csrf_token:'test',blockers:[]};
-  if(path==='start') {operation=route.request().postDataJSON().operation;body={session_id:`stub-${++session}`,nonce:'test',challenge:'대역 안내: 오른쪽을 보세요',expires_in_sec:90};}
-  if(path==='present') {
-    assert.equal(await page.getByRole('status').innerText(),'대역 안내: 오른쪽을 보세요');
-    // Match the real web server's minimum capture plan; per-frame browser assertions add transport overhead.
-    body={capture_duration_ms:3000,max_frames:80,illumination:[{offset_ms:500,duration_ms:300,color:[12,40,255]}]};
+  let frameRecord;
+  if(path==='frame') {
+    const frame=route.request().postDataJSON();
+    frameRecord={attempt:session,frame_id:frame.frame_id,timestamp_ms:frame.timestamp_ms,
+      route_started_ms:performance.now()};
+    frameRecords.push(frameRecord);
   }
-  if(path==='frame') body={accepted:true};
-  if(['start','present','frame','verify','consume'].includes(path)) {
-    const frozen=await page.evaluate(()=>({running:document.getAnimations().filter(a=>a.playState==='running').length,locked:!!document.querySelector('.vf-user--working'),video:document.querySelectorAll('video').length}));
-    assert.equal(frozen.running,0,'no motion during camera/verification');
-    assert.equal(frozen.locked,true);assert.equal(frozen.video,1);
-    if(path==='frame') {
-      const rgb=await page.locator('.vf-user').evaluate(el=>getComputedStyle(el).backgroundColor);
-      assert.ok(['rgb(255, 255, 255)','rgb(12, 40, 255)'].includes(rgb),rgb);
+  try {
+    let body={};
+    if(path==='context') body={mode:'local',registered,ready:true,user_label:'대역',csrf_token:'test',blockers:[]};
+    if(path==='start') {operation=route.request().postDataJSON().operation;body={session_id:`stub-${++session}`,nonce:'test',challenge:'대역 안내: 오른쪽을 보세요',expires_in_sec:90};}
+    if(path==='present') {
+      // Match the real web server's minimum capture plan; per-frame browser assertions add transport overhead.
+      body={capture_duration_ms:3000,max_frames:80,illumination:[{offset_ms:500,duration_ms:300,color:[12,40,255]}]};
     }
+    if(path==='frame') body={accepted:true};
+    if(['start','present','frame','verify','consume'].includes(path)) {
+      // One atomic browser snapshot keeps every assertion off separate RPC roundtrips.
+      const frozen=await page.evaluate(()=>{
+        const root=document.querySelector('.vf-user');
+        return {running:document.getAnimations().filter(a=>a.playState==='running').length,
+          locked:!!document.querySelector('.vf-user--working'),video:document.querySelectorAll('video').length,
+          rgb:root?getComputedStyle(root).backgroundColor:null,
+          instructions:[...document.querySelectorAll('[role="status"]')].map(element=>element.innerText)};
+      });
+      assert.equal(frozen.running,0,'no motion during camera/verification');
+      assert.equal(frozen.locked,true);assert.equal(frozen.video,1);
+      if(path==='present') assert.deepEqual(frozen.instructions,['대역 안내: 오른쪽을 보세요']);
+      if(path==='frame') assert.ok(['rgb(255, 255, 255)','rgb(12, 40, 255)'].includes(frozen.rgb),frozen.rgb);
+    }
+    if(path===networkFailure) { if(path==='consume') consumeCount++; return route.abort('failed'); }
+    if(path==='verify') {
+      if(holdVerify) await new Promise(resolve=>{releaseVerify=resolve;});
+      if(operation==='enroll') { registered=true;body={status:'ENROLLED',registered:true}; }
+      else body={session:{session_id:mismatch?'wrong':`stub-${session}`,final_decision:decision,gates:[]},token_id:decision==='ACCEPT'?'test-token':null,authorized:false,account_authenticated:false,user_message:'대역 판정',solutions:[]};
+    }
+    if(path==='consume') {consumeCount++; if(holdConsume) await new Promise(resolve=>{releaseConsume=resolve;}); body={consumed,account_authenticated:false};}
+    await route.fulfill({json:body}).catch(()=>{});
+  } finally {
+    if(frameRecord) frameRecord.route_duration_ms=performance.now()-frameRecord.route_started_ms;
   }
-  if(path===networkFailure) { if(path==='consume') consumeCount++; return route.abort('failed'); }
-  if(path==='verify') {
-    if(holdVerify) await new Promise(resolve=>{releaseVerify=resolve;});
-    if(operation==='enroll') { registered=true;body={status:'ENROLLED',registered:true}; }
-    else body={session:{session_id:mismatch?'wrong':`stub-${session}`,final_decision:decision,gates:[]},token_id:decision==='ACCEPT'?'test-token':null,authorized:false,account_authenticated:false,user_message:'대역 판정',solutions:[]};
-  }
-  if(path==='consume') {consumeCount++; if(holdConsume) await new Promise(resolve=>{releaseConsume=resolve;}); body={consumed,account_authenticated:false};}
-  await route.fulfill({json:body}).catch(()=>{});
 });
 async function open(){
   await openUserPreview(page, process.env.PREVIEW_URL || 'http://127.0.0.1:5187/user-preview.html');
@@ -149,6 +183,14 @@ try {
     assert.equal(await page.locator('.vf-user__balance').innerText(),'2,450,000원');
     assert.equal(await page.locator('.vf-user__history li').count(),0);
   }
+  runPassed=true;
   console.log('PASS lifecycle: verify network rejection, lost consume response, simulated 90s handler, pagehide, late ACCEPT discarded');
   console.log('PASS: stub enrollment separate; ACCEPT+consume receipt; STEP_UP/REJECT/ERROR/consume failure/session mismatch incomplete; cancel pending consume; tracks stopped');
-}catch(error){ console.error(await page.locator('main').innerText()); throw error; }finally{await browser.close();}
+}catch(error){ console.error(await page.locator('main').innerText()); throw error; }finally{
+  try {
+    if(process.env.BROWSER_REPORT) {
+      await mkdir(dirname(process.env.BROWSER_REPORT),{recursive:true});
+      await writeFile(process.env.BROWSER_REPORT,JSON.stringify(frameReport(),null,2)+'\n');
+    }
+  } finally { await browser.close(); }
+}

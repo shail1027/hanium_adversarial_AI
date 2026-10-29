@@ -363,3 +363,26 @@ def test_explicit_synthetic_settings_reach_pipeline_and_policy_without_token(set
     else:
         assert "SCORE_UNAVAILABLE:synthetic" not in caplog.text
     assert "synthetic" not in [gate["gate"] for gate in result["gates"]]
+
+
+def test_runtime_applies_explicit_threads_before_loading_services(tmp_path, monkeypatch):
+    import sys
+    sys.path.insert(0, str(REPO))
+    from src.face_auth.inference import cpu_runtime
+    observed = []
+    monkeypatch.setenv("HC160_TORCH_THREADS", "2")
+    monkeypatch.setattr(cpu_runtime, "configure_torch_threads_from_env",
+                        lambda: observed.append(os.environ["HC160_TORCH_THREADS"]))
+    runtime = HC160Runtime(Config(tmp_path))
+    runtime._load()
+    runtime._load()
+    assert observed == ["2"]
+
+
+def test_invalid_thread_setting_leaves_runtime_unloaded(tmp_path, monkeypatch):
+    monkeypatch.setenv("HC160_TORCH_THREADS", "invalid")
+    runtime = HC160Runtime(Config(tmp_path))
+    with pytest.raises(ValueError):
+        runtime._load()
+    assert runtime._cli is None
+    assert runtime.store is None

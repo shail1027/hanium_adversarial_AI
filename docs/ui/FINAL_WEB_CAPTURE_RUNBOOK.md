@@ -3,7 +3,7 @@
 이 문서가 기존 final-web-integration.md의 실행 설정을 대체한다. UI 변경 없음.
 웹 브랜치 `codex/final-web-integration`, 인증 backend는
 `/Users/choihwanseok/26_HP015/hanium-local/backend-final-integration`의 clean
-`f1fc9c57ca5d1721354c666ddd059d70d1efd56c`로 고정한다.
+`e486fa72ae87fa70909f888546a6d15ba60960e2`로 고정한다.
 
 ## 현재 준비 상태와 경계
 
@@ -263,7 +263,7 @@ consume은 다른 추론이 slot을 점유하면 기다리며 capture lock을 �
 
 ## 공개 입력 구성요소 시간 측정 (2026-10-30)
 
-현재 launcher와 같은 기본 Torch10 threads, Python3.11.7/arm64/Torch2.2.2/CPU.
+이전 launcher의 기본 Torch10 threads, Python3.11.7/arm64/Torch2.2.2/CPU.
 공개 astronaut512×512 BGR 동일이미지6프레임. 각 값1회 관측이며 파일 캐시가 준비됐을 수 있다.
 
 | 구성요소 | 첫 실행(초) | 같은 인스턴스 반복(초) |
@@ -289,7 +289,7 @@ fingerprint는 실제 SBI/RetinaFace와 **tiny identity/MTCNN 대역**을 사용
 백엔드 담당의 후속 handoff를 읽기 전용으로 확인했다: clean `f1fc9c57ca5d1721354c666ddd059d70d1efd56c`.
 변경은 cohort assembler·관련 테스트·문서이며 recorder/runtime/strict guard API는 그대로다.
 launcher pin과 cohort 명령을 이 revision으로 맞췄다. 이전 producer revision의 실측 분포를 호환으로 간주하지 않는다.
-현재 실측 분포가 없으므로 새 촬영은 이 clean revision에서 시작해야 한다.
+당시 실측 분포는 없었다. 새 촬영 revision은 문서 상단의 최신 pin을 따른다.
 
 이번 실행 경로 점검에서 촬영/추론 만료 기준의 불일치, 종료 후 늦은 결과 게시, 다른 추론 중 consume 잠금 대기를 재현하고 수정했다.
 추가 HTTP 회귀는 native 작업이 끝나기 전에 health/cancel이 응답하고, 늦은 ACCEPT/등록 결과와 token이 수용되지 않음을 확인한다.
@@ -302,3 +302,149 @@ reduced-motion 촬영 재실행은 시스템 부하에서 프레임 부족으로
 이는 실제 RAF/전송 대역의 wall-clock 검사이며, guard나 timeout을 완화하지 않았다.
 카메라/API는 대역이고 Chrome headless GPU 비활성 옵션은 테스트 프로세스에만 적용했다.
 서버의 실제3000ms/80프레임 계획과 일치하도록 브라우저 fixture를 맞췄고 제품 촬영 설정은 변경하지 않았다.
+
+
+## 순차 반복 측정과 확정 수집 설정 (2026-10-30 후속)
+
+이 절이 위 단일 관측 및 reduced-motion 미완료 기록을 갱신한다. 원본 결과는 삭제하지 않는다.
+`execution-evidence/thread-comparison/`의 JSON은 개별 값·중앙값·최댓값·부하·thread pool을 포함한다.
+`measure.py`를 독립 Python으로 실행하면 `/private/tmp/veriface-thread-benchmark`에 재측정한다.
+성능 측정, 브라우저, 전체 테스트는 동시에 실행하지 않는다. 다른 사용자 프로세스는 종료하지 않았다.
+Apple M1 Pro 물리/논리10코어, Python3.11.7, Torch2.2.2. 측정 중 load가 높고 변했다
+(기본 후보 하드웨어 snapshot 42.79/27.62/22.82). 이전 약50초 관측과 직접 개선율을 비교하지 않는다.
+
+| Torch intra-op | synthetic6프레임 반복3회(초) | 중앙값 | 최댓값 |
+|---|---|---:|---:|
+| 기본10 | 25.119 / 23.096 / 20.524 | 23.096 | 25.119 |
+| 2 | 20.928 / 22.911 / 22.128 | 22.128 | 22.911 |
+| 1 | 25.430 / 24.568 / 31.526 | 25.430 | 31.526 |
+
+| 단계, 중앙값/최댓값(초) | 기본10 | 2 |
+|---|---:|---:|
+| RetinaFace6 | 18.724 / 20.528 | 20.485 / 21.311 |
+| SBI forward6 | 4.364 / 4.583 | 1.634 / 1.635 |
+| MTCNN6 | .381 / .451 | .342 / .344 |
+| FaceNet6 | .077 / .145 | .058 / .118 |
+| adversarial 기존max_frames=3 | .069 / .091 | .055 / .077 |
+| PAD 실제crop6 | .044 / .076 | .032 / .039 |
+| 실제 모델 전체fingerprint | .269 / .311 | .246 / .272 |
+
+SBI/RetinaFace 검사·로드는 후보별 각각1회 1.603/1.360/1.315초였다. 디스크 cold cache를 강제하지 않았다.
+모델 로드 포함 최초 준비 실행은 32.952/22.208/28.163초이며 warm반복과 구분했다.
+SBI forward의 개선은 관측되지만 RetinaFace는 여전히 지배적이다. 전체synthetic 중앙값 개선은 약4.2%,
+최댓값 개선은 약8.8%로 제한적이며 순차 측정의 부하 차이 때문에 일반적인 속도 개선을 보증하지 않는다.
+실제 SBI/RetinaFace/PAD/FaceNet/MTCNN을 사용했고 모델 대역은 없다. 공개astronaut512×512 BGR 동일입력6프레임의
+synthetic 프레임점수는 모든후보/반복에서 최대절대차0.0이었다. identity/adversarial 점수 불변성까지 주장하지 않는다.
+전처리·해상도·클래스방향·프레임수·집계·gate·timeout은 변경하지 않았다. 캐시/혼합정밀도/프레임생략 없음.
+정지 공개영상은 replay/illumination/liveness/continuity에서 실패하므로 gate시간은 live성공 경로의 상한이 아니다.
+실제 촬영은 더 많은 프레임을 전송할 수 있어 6프레임 시간을 전체60초/90초 충족 근거로 사용할 수 없다.
+실측reference 및 실제전체FULL승인/지연 검증은 미완료다.
+
+수집과 웹 모두 launcher `configure()`의 `HC160_TORCH_THREADS=2`를 사용한다.
+CLI 직접실행 시에도 `HC160_TORCH_THREADS=2 "$PY" -m src.face_auth.cli ...`를 명시한다.
+CPU 및 Torch intra-op2, 현재환경 inter-op10/OpenBLAS10/OpenMP2를 수집 protocol에 기록한다.
+BLAS/interop는 임의로 조정하지 않았으며 실제 pool설정은 각축 strict contract의 `cpu_execution`에 기록한다.
+환경/라이브러리/threads가 달라지면 동일protocol이라고 가정하지 않는다. 기존metadata만 바꿔 재사용하지 않는다.
+모델/가중치/전처리는 기존 SBI registry와 PAD registry 그대로다.
+SBI FFc23 SHA-256 `2b05c2ba36ccb9e9f4f9e1aae9acd443ae2e6400ce725f56104fdb175d3c3267`,
+RetinaFace SHA-256 `b9fdd58c474d809b67166130b42d5913f00b48f912a3491565bc56b8a8a796f2`.
+RetinaFace longest-max-size2048, bbox margin1/8, 정렬warp없음, RGB380×380/255,
+softmax class1=fake, 모든유효프레임 산술평균을 유지한다. device=cpu,
+`--l3-defense-score`, defense_population_variance, adversarial_randomize=false,
+l3_randomized_samples=0 및 기존 FeatureSqueeze 기본값을 유지한다.
+calibration의 device binding 구조는 유지하며 실행threads는 별도contract설정이다.
+새 producer/contract에서 신규 등록receipt와 별도인증 수집을 시작해야 한다.
+
+일반/reduced-motion 검사는 실제 App에서 각각12시도를 모두 통과했다.
+일반28–31프레임(최대간격299.9ms), reduced30–31프레임(최대간격105.4ms).
+프레임 대역 응답의 최대 처리시간은 각각45.463ms/39.859ms였다.
+테스트의 화면상태 조회를 한 RPC로 합쳤고 실제RAF/3000ms/80프레임/최소10 및 모든조명·안내·취소·늦은응답
+assertion을 유지했다. 이전프레임부족을 이RPC원인 하나로 확정하지 않는다. 새실행은 각모드1회이며
+시스템 임의부하에서도 항상 통과한다는 의미가 아니다. JSON은 실패시에도 저장한다.
+네트워크실패/consume응답유실/pagehide/중복완료방지/장식모션정지를 포함한다.
+카메라·인증API는 대역이고 90초검사는 타이머callback 대역이다. 실제카메라는 켜지 않았다.
+127.0.0.1 주소는 이 Mac의 브라우저용이며 모바일viewport 검증은 실제휴대폰 검증이 아니다.
+
+
+같은 ASGI API 프로세스의 실제모델 작업도 별도 측정했다(`same-process-cancel.json`).
+공개사진을480×480 JPEG로 준비해 실제server decoder에30프레임 전달하고, 이 **측정 harness만** 첫6프레임을
+실제SBI/RetinaFace에 전달했다. 제품의프레임처리에는 변경없다. identity/PAD/나머지gate/reference/정책·token결과는 대역이다.
+모델로드2.515초, 6프레임추론23.964초, verify응답26.590초. 추론중health9회 중앙2.245ms/최대94.240ms,
+취소2.297ms였다. 취소후 native작업은 계속됐고 verify는 작업완료후 ERROR/토큰없음으로 반환했다.
+늦은ACCEPT대역은 공개되지 않았고 consume409, runtime.consume 미호출이었다.
+TCP/실제네트워크/실제FULL판정 검증이 아니며 TestClient의 같은process worker응답성 검사다.
+이 측정은 helper수정중 backend dirty=true이고 webidentity unknown으로 기록됐다. 이를strict승인자료로 사용하지 않는다.
+
+측정 중 한글 NFC/NFD 경로가 같은 디렉터리인데도 문자열 경로 비교로 web revision이 unknown이 되는 결함을
+재현했다. `runtime_metadata.repository_identity`의 Git root 확인을 동일파일 확인으로 바꿨다.
+parent repository 오인 방지는 유지하고, 정규화가 다른 실제디렉터리 회귀를 추가했다.
+첫 측정의 unknown 기록은 소급 수정하지 않는다. 새 프로세스 health에서 최종 revision을 확인한다.
+
+
+**현재 실행시간 차단은 해결되지 않았다.** 추가 같은ASGI프로세스 검사에서 전송30프레임 모두를
+실제SBI/RetinaFace에 전달했다(`same-process-timeout-30.json`). Torch2의 새프로세스에서
+checkpoint검사/로드2.217초, 실제30프레임추론123.309초, native완료125.619초였다(이확장검사는1회).
+기존60초Future제한에서 verify는60.010초에 ERROR/INFERENCE_TIMEOUT/토큰없음으로 반환했다.
+그뒤에도 native작업은 계속됐다. health는응답했고 새start는3.839ms에503/INFERENCE_BUSY로 거절됐다.
+늦은결과 뒤 state=ERROR/보관token없음, consume409/runtime.consume미호출을 확인했다.
+추론중health8회 중앙1.850ms/최대101.238ms, timeout직후health5.232ms였다.
+이는공개480×480 JPEG사진을실제decode한 모델작업이고 camera clock/config/registry 및
+identity/PAD/나머지gate/strictreference/정책·token결과는대역이다. 실제FULL촬영시간으로보고하지않는다.
+이전512×512 6프레임 반복과도동일조건비교가아니다. 실제web모델대기/timeout/late결과차단검사다.
+해상도·프레임수·timeout·모델을제품에서변경하지않았다. 실제FULL승인은실측reference부재와
+이CPU모델처리량문제둘다해결/검증해야한다. native작업을중단할수없으므로timeout뒤즉시재촬영하지않는다.
+실측수집전protocol에프레임수/입력형태/host부하/모델시간을함께기록하고실제capture전체시간을별도평가해야한다.
+현재설정2threads는재현가능한수집후보설정이며60초예산충족을인증한설정이아니다.
+
+
+추가 수치검사(`accuracy.json`)는 같은실제FaceNet/MTCNN/PAD 인스턴스와 기존deterministic adversarial로
+공개512×512 동일6프레임을threads10→2 각각1회 실행했다. embedding/adversarial/PAD/bbox/검출확률의
+관측최대절대차는모두0.0이었다. embedding/crop은저장하지않았다. 일반입력전체의수치불변성이나
+공격방어성능을증명하지않는다. 이검사도코드수정중dirty=true로기록했다.
+
+
+웹 전체회귀 첫실행은131통과/1실패였다. 실패는등록만료 테스트의가짜시계를 Future wait예산계산보다
+먼저이동시켜EXPIRED 대신안전한INFERENCE_TIMEOUT/ERROR로끝나는테스트경쟁이었다.
+Future.result 진입후(예산계산후)에시계를이동하도록테스트만동기화했다. EXPIRED/토큰없음/등록미게시
+assertion은그대로다. 관련집중검사는33통과했다. 제품deadline/timeout처리는변경하지않았다.
+
+
+최종 회귀 명령(각각 순차 실행, 성능측정과 동시 실행하지 않음):
+
+```sh
+# 인증 backend; ACK 실험 디렉터리는 작업 대상에서 제외
+cd "$BACKEND"
+HC160_TORCH_THREADS=2 \
+SYNTHETIC_MODEL=/Users/choihwanseok/26_HP015/hanium-local/synthetic-assets/FFc23.tar \
+SYNTHETIC_DETECTOR_MODEL=/Users/choihwanseok/26_HP015/hanium-local/synthetic-assets/retinaface_resnet50_2020-07-20.pth \
+VERIFACE_PAD_MODEL=/Users/choihwanseok/.codex/worktrees/final-pad-runtime/hanium-aml-defense/local_models/anti-spoof-mn3/anti-spoof-mn3.onnx \
+"$PY" -m pytest tests -q -rs
+# 웹: 위 실제 모델 env를 동일하게 주고, PAD는 HC160_TEST_PAD_MODEL 사용
+cd "$WEB"
+HC160_TEST_REPO="$BACKEND" HC160_TORCH_THREADS=2 \
+HC160_TEST_PAD_MODEL=/Users/choihwanseok/.codex/worktrees/final-pad-runtime/hanium-aml-defense/local_models/anti-spoof-mn3/anti-spoof-mn3.onnx \
+SYNTHETIC_MODEL=/Users/choihwanseok/26_HP015/hanium-local/synthetic-assets/FFc23.tar \
+SYNTHETIC_DETECTOR_MODEL=/Users/choihwanseok/26_HP015/hanium-local/synthetic-assets/retinaface_resnet50_2020-07-20.pth \
+"$PY" -m pytest backend/tests -q -rs
+node --test frontend/tests/*.test.ts
+npm --prefix frontend run build
+npm --prefix frontend run lint
+"$PY" -m pip check
+git diff --check
+# 실제App, camera/API대역; 두모드는서로순차실행
+PLAYWRIGHT_MODULE=/Users/choihwanseok/.agents/skills/gstack/node_modules/playwright/index.mjs \
+INTEGRATED_APP=1 PREVIEW_URL=http://127.0.0.1:5173/ BROWSER_REPORT=/private/tmp/auth-normal.json \
+node frontend/tests/user-auth.browser.mjs
+PLAYWRIGHT_MODULE=/Users/choihwanseok/.agents/skills/gstack/node_modules/playwright/index.mjs \
+INTEGRATED_APP=1 PREVIEW_URL=http://127.0.0.1:5173/ REDUCED_MOTION=1 BROWSER_REPORT=/private/tmp/auth-reduced.json \
+node frontend/tests/user-auth.browser.mjs
+```
+
+인증 backend `tests/` 전체1089통과/skip0(96.66초, 기존warning9), 웹전체재실행132통과/skip0
+(35.55초, 기존warning4), frontend21통과, TypeScript/build·lint·pip check·양쪽diffcheck통과.
+실제모델opt-in은공개사진/배열 smoke이며 다른gate/reference/정책입력대역 범위를각테스트docstring에명시했다.
+정상strictbundle 테스트는실측이아닌명시적test_fixture이다. 실제guard/정책의별도단계성능은측정하지않았다.
+실측reference/카메라challenge/실제전체FULL90초완료는검증되지않았으며,30프레임모델의시간초과는확인됐다.
+
+실제 App 추가회귀도 역할진입/로그아웃·관리자dataset실패격리·반응형CSS·메뉴/tooltip/focus·reduced-motion을통과했다.
+이검사는camera요청0회이며로그인/인증API는명시적대역이다. 사용자360/390/430px와관리자1280/1440px 검사를포함한다.

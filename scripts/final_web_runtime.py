@@ -15,7 +15,7 @@ WEB = Path(__file__).resolve().parents[1]
 BACKEND = LOCAL / 'backend-final-integration'
 PRIVATE = LOCAL / 'private-demo.local'
 OUTPUT = LOCAL / 'final-capture.local'
-EXPECTED_BACKEND = 'f1fc9c57ca5d1721354c666ddd059d70d1efd56c'
+EXPECTED_BACKEND = 'e486fa72ae87fa70909f888546a6d15ba60960e2'
 REFERENCE_ENV = (
     'HC160_REFERENCE_BUNDLE', 'HC160_REFERENCE_SCORES', 'HC160_REFERENCE_CONTRACT',
     'HC160_REFERENCE_SPLITS', 'HC160_REFERENCE_PROTOCOL_ID',
@@ -43,6 +43,7 @@ def configure():
         'HC160_SYNTHETIC_DETECTOR_MODEL': str(LOCAL / 'synthetic-assets/retinaface_resnet50_2020-07-20.pth'),
         'HC160_SYNTHETIC_DEVICE': 'cpu',
         'HC160_DEVICE': 'cpu',
+        'HC160_TORCH_THREADS': '2',
         'HC160_L3_DEFENSE_SCORE': '1',
         **references,
     })

@@ -113,3 +113,19 @@ def test_gate_runtime_version_uses_cached_commit():
     body = _auth_result(c, {"decision": "REJECT", "gates": [{"gate": "identity", "status": "FAIL"}]})
     assert body["session"]["gates"][0]["provenance"]["artifact_version"] == "a" * 40 + "-dirty"
     assert body["session"]["decision_provenance"]["runtime_identity"] == c.runtime_identity
+
+
+def test_repository_identity_handles_filesystem_unicode_normalization(tmp_path, monkeypatch):
+    import unicodedata
+    from backend.app import runtime_metadata
+    root = tmp_path / "caf\u00e9"
+    root.mkdir()
+    (root / ".git").mkdir()
+    git_root = tmp_path / unicodedata.normalize("NFD", root.name)
+    if not git_root.exists():
+        pytest.skip("filesystem does not alias Unicode normalization forms")
+    assert root != git_root and root.samefile(git_root)
+    outputs = iter([str(git_root), "a" * 40, ""])
+    monkeypatch.setattr(runtime_metadata.subprocess, "run",
+                        lambda *a, **kw: SimpleNamespace(stdout=next(outputs)))
+    assert runtime_metadata.repository_identity(root) == {"commit": "a" * 40, "dirty": False}

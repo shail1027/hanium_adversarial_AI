@@ -1,0 +1,106 @@
+{
+  "scope": "public-input numerical smoke only; no real reference, calibration, identity authorization or attack performance",
+  "producer_before": {
+    "commit": "f1fc9c57ca5d1721354c666ddd059d70d1efd56c",
+    "dirty": true
+  },
+  "frames": 6,
+  "repetitions_per_candidate": 1,
+  "models": "real cached FaceNet, packaged MTCNN, registered ONNX PAD; deterministic existing adversarial default",
+  "notes": [
+    "same loaded model instances, candidate10 then2; no embeddings or crops saved",
+    "SBI not rerun here; prior sequential six-frame benchmark compared its output",
+    "observed equality on one repeated public image does not prove general numeric invariance"
+  ],
+  "public_bgr_sha256": "f22309ff463ef566bffd5a41b9d9867c5fd9490e9ced354b29d4194820da2033",
+  "results": [
+    {
+      "threads": 10,
+      "seconds": 0.6105845829988539,
+      "cpu_execution": {
+        "torch_intra_op_threads": 10,
+        "torch_inter_op_threads": 10,
+        "native_threadpools": [
+          {
+            "user_api": "blas",
+            "internal_api": "openblas",
+            "num_threads": 10,
+            "prefix": "libopenblas",
+            "version": "0.3.18",
+            "threading_layer": "pthreads",
+            "architecture": "armv8"
+          },
+          {
+            "user_api": "blas",
+            "internal_api": "openblas",
+            "num_threads": 10,
+            "prefix": "libopenblas",
+            "version": "0.3.23.dev",
+            "threading_layer": "pthreads",
+            "architecture": "armv8"
+          },
+          {
+            "user_api": "openmp",
+            "internal_api": "openmp",
+            "num_threads": 10,
+            "prefix": "libomp",
+            "version": null
+          }
+        ]
+      },
+      "max_absolute_difference_vs_10": {
+        "embeddings": 0.0,
+        "adversarial": 0.0,
+        "pad": 0.0,
+        "mtcnn_bbox": 0.0,
+        "mtcnn_probability": 0.0
+      }
+    },
+    {
+      "threads": 2,
+      "seconds": 0.5364744170001359,
+      "cpu_execution": {
+        "torch_intra_op_threads": 2,
+        "torch_inter_op_threads": 10,
+        "native_threadpools": [
+          {
+            "user_api": "blas",
+            "internal_api": "openblas",
+            "num_threads": 10,
+            "prefix": "libopenblas",
+            "version": "0.3.18",
+            "threading_layer": "pthreads",
+            "architecture": "armv8"
+          },
+          {
+            "user_api": "blas",
+            "internal_api": "openblas",
+            "num_threads": 10,
+            "prefix": "libopenblas",
+            "version": "0.3.23.dev",
+            "threading_layer": "pthreads",
+            "architecture": "armv8"
+          },
+          {
+            "user_api": "openmp",
+            "internal_api": "openmp",
+            "num_threads": 2,
+            "prefix": "libomp",
+            "version": null
+          }
+        ]
+      },
+      "max_absolute_difference_vs_10": {
+        "embeddings": 0.0,
+        "adversarial": 0.0,
+        "pad": 0.0,
+        "mtcnn_bbox": 0.0,
+        "mtcnn_probability": 0.0
+      }
+    }
+  ],
+  "producer_after": {
+    "commit": "f1fc9c57ca5d1721354c666ddd059d70d1efd56c",
+    "dirty": true
+  }
+}

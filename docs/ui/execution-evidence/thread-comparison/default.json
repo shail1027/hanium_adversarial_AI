@@ -1,0 +1,296 @@
+{
+  "candidate": "default",
+  "scope": "public component smoke; no capture, reference, guard, policy, token or live FULL latency",
+  "producer_before": {
+    "commit": "f1fc9c57ca5d1721354c666ddd059d70d1efd56c",
+    "dirty": false
+  },
+  "python": "3.11.7",
+  "machine": "arm64",
+  "system_before": {
+    "load_average": [
+      22.97265625,
+      21.2333984375,
+      20.349609375
+    ],
+    "logical_cpus": 10,
+    "physical_cpus": "unavailable",
+    "cpu_brand": "unavailable",
+    "process_aggregate": "unavailable"
+  },
+  "torch_version": "2.2.2",
+  "torch_threads_default": 10,
+  "torch_threads": 10,
+  "torch_interop_threads": 10,
+  "torch_parallel_info": "ATen/Parallel:\n\tat::get_num_threads() : 10\n\tat::get_num_interop_threads() : 10\nOpenMP 201811\n\tomp_get_max_threads() : 10\nMKL not found\nMKLDNN not found\nstd::thread::hardware_concurrency() : 10\nEnvironment variables:\n\tOMP_NUM_THREADS : [not set]\n\tMKL_NUM_THREADS : [not set]\nATen parallel backend: OpenMP\n",
+  "blas_pools": [
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 10,
+      "prefix": "libopenblas",
+      "version": "0.3.23.dev",
+      "threading_layer": "pthreads",
+      "architecture": "armv8"
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 10,
+      "prefix": "libomp",
+      "version": null
+    }
+  ],
+  "input": {
+    "source": "skimage.data.astronaut",
+    "shape": [
+      512,
+      512,
+      3
+    ],
+    "dtype": "uint8",
+    "bgr_sha256": "f22309ff463ef566bffd5a41b9d9867c5fd9490e9ced354b29d4194820da2033",
+    "frame_count": 6,
+    "same_unchanged_image_repeated": true,
+    "resolution_or_frame_skipping": false
+  },
+  "synthetic_runs": [
+    {
+      "kind": "initial_warmup_with_load",
+      "index": 0,
+      "total_seconds": 32.95168654200097,
+      "retinaface_seconds": 22.832324915994832,
+      "sbi_forward_seconds": 8.368195584003843,
+      "frame_scores": [
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519
+      ],
+      "mean_score": 0.007642821874469519
+    },
+    {
+      "kind": "warm_repeat",
+      "index": 1,
+      "total_seconds": 25.119343916998332,
+      "retinaface_seconds": 20.52804116700281,
+      "sbi_forward_seconds": 4.582683958997222,
+      "frame_scores": [
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519
+      ],
+      "mean_score": 0.007642821874469519
+    },
+    {
+      "kind": "warm_repeat",
+      "index": 2,
+      "total_seconds": 23.09625324999797,
+      "retinaface_seconds": 18.724302791997616,
+      "sbi_forward_seconds": 4.3638474569997925,
+      "frame_scores": [
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519
+      ],
+      "mean_score": 0.007642821874469519
+    },
+    {
+      "kind": "warm_repeat",
+      "index": 3,
+      "total_seconds": 20.523633583001356,
+      "retinaface_seconds": 16.324484207998466,
+      "sbi_forward_seconds": 4.191547999998875,
+      "frame_scores": [
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519,
+        0.007642821874469519
+      ],
+      "mean_score": 0.007642821874469519
+    }
+  ],
+  "synthetic_warm_summary": {
+    "total_seconds": {
+      "individual": [
+        25.119343916998332,
+        23.09625324999797,
+        20.523633583001356
+      ],
+      "median": 23.09625324999797,
+      "max": 25.119343916998332
+    },
+    "retinaface_seconds": {
+      "individual": [
+        20.52804116700281,
+        18.724302791997616,
+        16.324484207998466
+      ],
+      "median": 18.724302791997616,
+      "max": 20.52804116700281
+    },
+    "sbi_forward_seconds": {
+      "individual": [
+        4.582683958997222,
+        4.3638474569997925,
+        4.191547999998875
+      ],
+      "median": 4.3638474569997925,
+      "max": 4.582683958997222
+    }
+  },
+  "additional_real_components": {
+    "mtcnn_detect_6": {
+      "individual": [
+        0.4508105000022624,
+        0.38109445800000685,
+        0.34831012499853387
+      ],
+      "median": 0.38109445800000685,
+      "max": 0.4508105000022624
+    },
+    "facenet_embed_6": {
+      "individual": [
+        0.14463933400111273,
+        0.0752529580022383,
+        0.07657275000019581
+      ],
+      "median": 0.07657275000019581,
+      "max": 0.14463933400111273
+    },
+    "quality_6": {
+      "individual": [
+        0.0061749579981551506,
+        0.0006285000017669518,
+        0.000716957998520229
+      ],
+      "median": 0.000716957998520229,
+      "max": 0.0061749579981551506
+    },
+    "adversarial_default_max_frames_3": {
+      "individual": [
+        0.09092400000008638,
+        0.06912741599808214,
+        0.06735166600265075
+      ],
+      "median": 0.06912741599808214,
+      "max": 0.09092400000008638
+    },
+    "pad_real_rois_6": {
+      "individual": [
+        0.07557824999821605,
+        0.040135166000254685,
+        0.04396679099954781
+      ],
+      "median": 0.04396679099954781,
+      "max": 0.07557824999821605
+    },
+    "camera_motion": {
+      "individual": [
+        0.02287649999925634,
+        0.020745000001625158,
+        0.018020874998910585
+      ],
+      "median": 0.020745000001625158,
+      "max": 0.02287649999925634
+    },
+    "content_replay": {
+      "individual": [
+        0.0014077089981583413,
+        0.0013560419974965043,
+        0.0011164999996253755
+      ],
+      "median": 0.0013560419974965043,
+      "max": 0.0014077089981583413
+    },
+    "illumination": {
+      "individual": [
+        2.9082999390084296e-05,
+        3.291600296506658e-05,
+        2.2332998923957348e-05
+      ],
+      "median": 2.9082999390084296e-05,
+      "max": 3.291600296506658e-05
+    },
+    "head_pose_active_liveness": {
+      "individual": [
+        0.00011283400090178475,
+        0.00012674999743467197,
+        7.733399979770184e-05
+      ],
+      "median": 0.00011283400090178475,
+      "max": 0.00012674999743467197
+    },
+    "continuity": {
+      "individual": [
+        8.145899846567772e-05,
+        6.454200047301129e-05,
+        5.1333001465536654e-05
+      ],
+      "median": 6.454200047301129e-05,
+      "max": 8.145899846567772e-05
+    },
+    "runtime_contract_full_real_models": {
+      "individual": [
+        0.31098662500153296,
+        0.25728766699830885,
+        0.2692432080002618
+      ],
+      "median": 0.2692432080002618,
+      "max": 0.31098662500153296
+    }
+  },
+  "public_input_gate_statuses": {
+    "camera_motion": "PASS",
+    "content_replay": "FAIL",
+    "illumination": "FAIL",
+    "active_liveness": "FAIL",
+    "continuity": "FAIL"
+  },
+  "load_seconds": {
+    "mtcnn_package_weights_load": 0.029021124999417225,
+    "facenet_cached_weights_load": 0.25278241699925275,
+    "pad_registered_load": 0.12387191699963296,
+    "full_factory_with_pad_load": 0.1503751660020498,
+    "sbi_retinaface_load": 1.6027990419970592
+  },
+  "no_identity_or_model_doubles": true,
+  "pad_providers": [
+    "CPUExecutionProvider"
+  ],
+  "onnx_thread_options": {
+    "intra_op_num_threads": 0,
+    "inter_op_num_threads": 0
+  },
+  "notes": [
+    "no policy/threshold evaluation or authorization; artificial public anchor only",
+    "repeated public still image is expected to fail live gates; all configured frames and resolution retained",
+    "three warmed observations only; no claim about real-camera performance, FAR or security",
+    "component timings exclude imports, capture, HTTP, guarded bundle validation and policy/SQLite/token work"
+  ],
+  "producer_after": {
+    "commit": "f1fc9c57ca5d1721354c666ddd059d70d1efd56c",
+    "dirty": false
+  },
+  "system_after": {
+    "load_average": [
+      35.06494140625,
+      27.4833984375,
+      22.990234375
+    ],
+    "logical_cpus": 10,
+    "physical_cpus": "unavailable",
+    "cpu_brand": "unavailable",
+    "process_aggregate": "unavailable"
+  }
+}

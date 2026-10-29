@@ -29,6 +29,8 @@ class HC160Runtime:
             from src.face_auth import cli
             if not Path(cli.__file__).resolve().is_relative_to(Path(repo)):
                 raise RuntimeError("HC160 module was loaded from another repository")
+            from src.face_auth.inference.cpu_runtime import configure_torch_threads_from_env
+            configure_torch_threads_from_env()
             self._cli = cli
             self.store = cli.InMemoryStore()
             self.sessions = cli.SessionService(

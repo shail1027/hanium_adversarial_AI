@@ -21,7 +21,7 @@ def blocked_call(function):
 
 
 @pytest.mark.parametrize("operation", ["enroll", "authenticate"])
-def test_result_after_evaluation_deadline_never_publishes_or_approves(web, operation):
+def test_result_after_evaluation_deadline_never_publishes_or_approves(web, operation, monkeypatch):
     client, service, runtime, clock = web
     if operation == "authenticate":
         enrolled(web)
@@ -30,10 +30,24 @@ def test_result_after_evaluation_deadline_never_publishes_or_approves(web, opera
     original = runtime.enroll if operation == "enroll" else runtime.evaluate
     blocked, entered, release = blocked_call(original)
     setattr(runtime, "enroll" if operation == "enroll" else "evaluate", blocked)
+    # Advance the fake clock only after the Future wait budget was calculated.
+    # Otherwise this test races the separate INFERENCE_TIMEOUT branch.
+    waiting = threading.Event()
+    submit = service.executor.submit
+    def observed_submit(*args):
+        job = submit(*args)
+        result = job.result
+        def observed_result(timeout=None):
+            waiting.set()
+            return result(timeout=timeout)
+        job.result = observed_result
+        return job
+    monkeypatch.setattr(service.executor, "submit", observed_submit)
     with ThreadPoolExecutor(max_workers=1) as requests:
         response = requests.submit(client.post, "/api/face/verify", json=session)
         try:
             assert entered.wait(1)
+            assert waiting.wait(1)
             clock.now = service.captures[session["session_id"]].evaluation_deadline + 1
         finally:
             release.set()

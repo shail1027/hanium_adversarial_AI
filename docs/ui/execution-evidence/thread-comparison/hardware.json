@@ -1,0 +1,26 @@
+{
+  "captured_utc": "2026-10-29T15:45:34.824145+00:00",
+  "physical_cpus": 10,
+  "logical_cpus": 10,
+  "cpu_brand": "Apple M1 Pro",
+  "load_average": [
+    42.787109375,
+    27.615234375,
+    22.82177734375
+  ],
+  "process_aggregate": {
+    "python": {
+      "count": 7,
+      "cpu_percent_sum": 416.1
+    },
+    "node": {
+      "count": 63,
+      "cpu_percent_sum": 0.0
+    },
+    "other": {
+      "count": 674,
+      "cpu_percent_sum": 409.10000000000014
+    }
+  },
+  "scope": "read-only aggregate while default candidate active; no names, arguments or environment retained"
+}

@@ -1,0 +1,101 @@
+{
+  "status": "passed",
+  "transport": "in-process ASGI TestClient; no TCP/network",
+  "scope": "actual SBI/RetinaFace in CaptureService executor; not live FULL",
+  "doubles": [
+    "capture clock and HTTP camera transport",
+    "registration/configuration",
+    "identity/PAD/liveness/strict references/policy/token outcome"
+  ],
+  "input": {
+    "source": "skimage.data.astronaut",
+    "shape": [
+      480,
+      480,
+      3
+    ],
+    "preparation": "public RGB resized to 480x480, JPEG quality95, real server BGR decoding",
+    "transport_frames": 30,
+    "real_model_frames": 30
+  },
+  "torch_threads": 2,
+  "main_pid": 22850,
+  "health_samples": [
+    {
+      "latency_ms": 101.23812500023632,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 4.116333999263588,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 1.6739999991841614,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 1.5007080000941642,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 1.6438750026281923,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 2.3410409994539805,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 2.026792000833666,
+      "status": 200,
+      "during_real_score": true
+    },
+    {
+      "latency_ms": 1.234334002219839,
+      "status": 200,
+      "during_real_score": true
+    }
+  ],
+  "runtime_identity": {
+    "backend_commit": "f1fc9c57ca5d1721354c666ddd059d70d1efd56c",
+    "backend_dirty": true,
+    "web_commit": "7a7c381065ecca08e5d4c023968df4c85379b232",
+    "web_dirty": true
+  },
+  "model_worker_pid": 22850,
+  "model_worker_thread": "hc160-inference_0",
+  "checkpoint_load_seconds": 2.2173130000010133,
+  "verify_request_seconds": 60.01048291600091,
+  "public_decision": "ERROR",
+  "public_error_code": "INFERENCE_TIMEOUT",
+  "public_token_present": false,
+  "timeout_observed": true,
+  "native_pending_after_public_response": true,
+  "health_after_timeout_ms": 5.2320419999887235,
+  "health_after_timeout_status": 200,
+  "retry_after_timeout_ms": 3.839458997390466,
+  "retry_after_timeout_status": 503,
+  "retry_after_timeout_error": "INFERENCE_BUSY",
+  "actual_output_count": 30,
+  "actual_outputs_finite_in_range": true,
+  "thirty_frame_inference_seconds": 123.30885879099878,
+  "cold_load_and_thirty_frame_seconds": 125.61746008400223,
+  "actual_signal_evaluated": true,
+  "native_complete_seconds": 125.6190063330032,
+  "capture_state_after_native_result": "ERROR",
+  "token_retained_after_native_result": false,
+  "late_consume_status": 409,
+  "late_result_suppressed": true,
+  "runtime_token_consume_called": false,
+  "health_latency_ms": {
+    "min": 1.234334002219839,
+    "median": 1.8503960000089137,
+    "max": 101.23812500023632
+  }
+}

@@ -36,7 +36,7 @@ def repository_identity(path):
         return subprocess.run(["git", "-C", str(root), *args], check=True,
                               capture_output=True, text=True, timeout=5).stdout.strip()
     try:
-        if Path(git("rev-parse", "--show-toplevel")).resolve() != root:
+        if not Path(git("rev-parse", "--show-toplevel")).samefile(root):
             return unknown
         commit = git("rev-parse", "HEAD")
         dirty = bool(git("status", "--porcelain", "--untracked-files=normal"))
