@@ -309,3 +309,56 @@ def test_artifact_only_authentication_fails_closed(setup_runtime, mutation):
     else:
         with pytest.raises((cli.RegistrationCalibrationError, OSError)):
             runtime._bound_calibration(cli, args, template, calibration_path)
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_explicit_synthetic_settings_reach_pipeline_and_policy_without_token(setup_runtime, caplog, failed):
+    """Real runtime/policy; pipeline result is a test double, never model evidence."""
+    from backend.app.model_adapter import ModelCliConfig
+    from src.face_auth.domain.graded_decision import ScoreContribution
+
+    runtime, cli, frames, template_path, calibration_path, _ = setup_runtime
+    directory = runtime.config.directory
+    runtime.config = ModelCliConfig(
+        repo_path=str(REPO), storage_root=str(directory), user_id="alice", device_id="fixed",
+        query_budget_db=str(directory / "budget.sqlite"),
+        pad_model=str(directory / "pad.onnx"),
+        pad_registry=str(REPO / "configs/models/anti-spoof-mn3.json"),
+        template_key_id="test-key", synthetic_model=str(directory / "FFc23.tar"),
+        synthetic_detector_model=str(directory / "retinaface.pth"),
+    )
+    session, challenge = runtime.create("alice", "LOGIN", None)
+    illumination = runtime.illumination(challenge.nonce, 0.)
+    names = ("frame_integrity", "quality", "single_face", "camera_motion", "content_replay",
+             "illumination_challenge", "passive_pad", "active_liveness", "continuity", "identity")
+    gates = tuple(cli.GateResult(name, cli.GateStatus.PASS, score=1., threshold=.6)
+                  for name in names)
+    signal = ScoreContribution(
+        "synthetic", None if failed else .2, evaluated=not failed,
+        reason_codes=("MODEL_ERROR",) if failed else (), signal_version="synthetic-frame-mean-v1",
+    )
+    observation = SimpleNamespace(
+        baseline=SimpleNamespace(total_frames=6, valid_face_frames=6),
+        gate_results=gates, score_contributions=(signal,),
+    )
+
+    def configured_pipeline(args, baseline, embedder, template_embedding):
+        assert args.synthetic_model == runtime.config.synthetic_model
+        assert args.synthetic_detector_model == runtime.config.synthetic_detector_model
+        assert args.synthetic_device == "cpu"
+        return SimpleNamespace(evaluate=lambda *a, **k: observation)
+
+    with patch.object(cli, "MTCNNFaceDetector"), patch.object(cli, "FaceNetEmbedder"), \
+            patch.object(cli, "_full_pipeline", side_effect=configured_pipeline):
+        result = runtime.evaluate(session.session_id, "alice", None, frames, 1,
+                                  illumination, template_path, calibration_path)
+    assert result["decision"] == "STEP_UP"
+    assert result["token_id"] is None
+    assert runtime.store.find_token_by_session(session.session_id) is None
+    assert "MISSING_REFERENCE:synthetic" in caplog.text
+    assert "SCORE_NOT_PROVIDED:synthetic" not in caplog.text
+    if failed:
+        assert "SCORE_UNAVAILABLE:synthetic:ERROR" in caplog.text
+    else:
+        assert "SCORE_UNAVAILABLE:synthetic" not in caplog.text
+    assert "synthetic" not in [gate["gate"] for gate in result["gates"]]

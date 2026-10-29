@@ -19,6 +19,9 @@ class ModelCliConfig:
     query_budget_db: str = ""
     pad_model: str = ""
     pad_registry: str = ""
+    synthetic_model: str = ""
+    synthetic_detector_model: str = ""
+    synthetic_device: str = "cpu"
     threshold: str = ""
     threshold_version: str = ""
     template_key_id: str = ""
@@ -36,6 +39,9 @@ class ModelCliConfig:
             query_budget_db=os.getenv("VERIFACE_QUERY_BUDGET_DB", ""),
             pad_model=os.getenv("HC160_PAD_MODEL", ""),
             pad_registry=os.getenv("HC160_PAD_REGISTRY", ""),
+            synthetic_model=os.getenv("HC160_SYNTHETIC_MODEL", ""),
+            synthetic_detector_model=os.getenv("HC160_SYNTHETIC_DETECTOR_MODEL", ""),
+            synthetic_device=os.getenv("HC160_SYNTHETIC_DEVICE", "cpu"),
             threshold=os.getenv("HC160_THRESHOLD", ""),
             threshold_version=os.getenv("HC160_THRESHOLD_VERSION", ""),
             template_key_id=os.getenv("HC160_TEMPLATE_KEY_ID", ""),
@@ -73,6 +79,15 @@ class ModelCliConfig:
             value = getattr(self, name)
             if value and (not Path(value).is_absolute() or not Path(value).is_file()):
                 errors.append(f"{name}: absolute file required")
+        if auth and (self.synthetic_model or self.synthetic_detector_model):
+            if not self.synthetic_model or not self.synthetic_detector_model:
+                errors.append("HC160_SYNTHETIC_MODEL / HC160_SYNTHETIC_DETECTOR_MODEL: complete pair required")
+            for name in ("synthetic_model", "synthetic_detector_model"):
+                value = getattr(self, name)
+                if value and (not Path(value).is_absolute() or not Path(value).is_file()):
+                    errors.append(f"{name}: absolute file required")
+            if self.synthetic_device != "cpu":
+                errors.append("HC160_SYNTHETIC_DEVICE: only cpu is supported")
         if auth and self.query_budget_db and not Path(self.query_budget_db).parent.is_dir():
             errors.append("query_budget_db: parent directory missing")
         if auth and (self.threshold or self.threshold_version):
@@ -114,6 +129,10 @@ class ModelCliConfig:
             "--pad-runtime", "onnx", "--pad-model", self.pad_model,
             "--pad-model-version", "open-model-zoo-anti-spoof-mn3-2022.1",
             "--pad-registry", self.pad_registry,
+            *(["--synthetic-model", self.synthetic_model,
+               "--synthetic-detector-model", self.synthetic_detector_model,
+               "--synthetic-device", self.synthetic_device]
+              if self.synthetic_model or self.synthetic_detector_model else []),
             "--graded-rule-table", str(root / "configs/decision/graded_decision_v1.json"),
             "--query-budget-config", str(root / "configs/decision/query_budget_v1.json"),
             "--template-audit-log", str(Path(self.storage_root) / "template-audit.jsonl"),

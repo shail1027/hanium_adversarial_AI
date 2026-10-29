@@ -87,3 +87,57 @@ def test_enrollment_args_use_enroll_parser_without_population_configuration(tmp_
     assert not hasattr(args, "threshold")
     auth = config.args("alice", tmp_path / "template", tmp_path / "calibration", None)
     assert auth.threshold is auth.threshold_version is None
+
+
+def test_synthetic_environment_is_explicit_and_defaults_to_cpu(monkeypatch):
+    monkeypatch.setenv("HC160_SYNTHETIC_MODEL", "/models/FFc23.tar")
+    monkeypatch.setenv("HC160_SYNTHETIC_DETECTOR_MODEL", "/models/retinaface.pth")
+    monkeypatch.delenv("HC160_SYNTHETIC_DEVICE", raising=False)
+    config = ModelCliConfig.from_env()
+    assert config.synthetic_model == "/models/FFc23.tar"
+    assert config.synthetic_detector_model == "/models/retinaface.pth"
+    assert config.synthetic_device == "cpu"
+
+
+def test_synthetic_auth_requires_complete_absolute_file_pair_and_cpu(tmp_path, monkeypatch):
+    monkeypatch.setenv("HC160_TEMPLATE_KEYS", "test-only")
+    for name in ("pad.onnx", "pad.json", "FFc23.tar", "retinaface.pth"):
+        (tmp_path / name).touch()
+    config = ModelCliConfig(
+        repo_path=str(tmp_path), storage_root=str(tmp_path), user_id="alice", device_id="fixed",
+        template_key_id="key", query_budget_db=str(tmp_path / "budget.sqlite"),
+        pad_model=str(tmp_path / "pad.onnx"), pad_registry=str(tmp_path / "pad.json"),
+        synthetic_model=str(tmp_path / "FFc23.tar"),
+        synthetic_detector_model=str(tmp_path / "retinaface.pth"),
+    )
+    assert config.ready()
+    for fields in (
+        {"synthetic_model": ""}, {"synthetic_detector_model": ""},
+        {"synthetic_model": "relative.tar"},
+        {"synthetic_detector_model": str(tmp_path / "missing.pth")},
+        {"synthetic_device": "cuda"},
+    ):
+        candidate = replace(config, **fields)
+        assert not candidate.ready()
+        assert candidate.ready("enroll")
+    assert replace(config, synthetic_model="", synthetic_detector_model="").ready()
+
+
+def test_synthetic_args_only_enable_explicit_pair_and_leave_enrollment_unchanged(tmp_path):
+    repo = os.getenv("HC160_TEST_REPO")
+    if not repo:
+        pytest.skip("HC160_TEST_REPO required")
+    sys.path.insert(0, repo)
+    config = ModelCliConfig(repo_path=repo, storage_root=str(tmp_path), user_id="alice",
+                            template_key_id="key")
+    disabled = config.args("alice", tmp_path / "template", tmp_path / "calibration", None)
+    assert disabled.synthetic_model is disabled.synthetic_detector_model is None
+    enabled = replace(config, synthetic_model=str(tmp_path / "FFc23.tar"),
+                      synthetic_detector_model=str(tmp_path / "retinaface.pth"))
+    args = enabled.args("alice", tmp_path / "template", tmp_path / "calibration", None)
+    assert args.synthetic_model == enabled.synthetic_model
+    assert args.synthetic_detector_model == enabled.synthetic_detector_model
+    assert args.synthetic_device == "cpu"
+    assert args.profile == "FULL"
+    enrollment = enabled.enrollment_args("alice", tmp_path / "template", tmp_path / "calibration")
+    assert not hasattr(enrollment, "synthetic_model")
