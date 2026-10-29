@@ -37,7 +37,7 @@ export function useTransfer() {
   }, []);
   const cancel = useCallback(() => {
     stop(); setWorking(false); setIllumination(''); setChallenge(''); setResult(null);
-    setError('송금을 취소했어요. 시연 잔액은 그대로예요.'); changeScreen('confirm');
+    setError('송금을 취소했어요. 잔액은 그대로예요.'); changeScreen('confirm');
   }, [stop]);
   const reloadContext = useCallback(async () => {
     contextRequest.current?.abort();

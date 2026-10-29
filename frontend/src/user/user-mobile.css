@@ -26,9 +26,8 @@
 .vf-user .vf-user__header { display: flex; align-items: center; gap: 10px; min-height: 90px; padding: 18px 24px 12px; }
 .vf-user .vf-user__brand { display: inline-flex; align-items: center; gap: 9px; color: var(--vf-text); text-decoration: none; font-size: 24px; font-weight: 750; letter-spacing: -.7px; }
 .vf-user .vf-user__mark { display: block; background: linear-gradient(140deg, #bd8cff, #7332f4); color: transparent; background-clip: text; font-size: 36px; font-weight: 900; line-height: 1; transform: scaleX(.85); }
-.vf-user .vf-user__badge { margin-left: auto; padding: 4px 8px; border: 1px solid #4b3b65; border-radius: 7px; color: #c8b7e5; font-size: 11px; white-space: nowrap; }
 .vf-user .vf-user__icon-button { width: 44px; min-height: 44px; padding: 8px; margin-left: -10px; }
-.vf-user .vf-user__profile-button { width: 44px; min-height: 44px; padding: 10px; }
+.vf-user .vf-user__profile-button { margin-left: auto; width: 44px; min-height: 44px; padding: 10px; }
 .vf-user .vf-user__main { padding: 10px 24px 116px; overflow-wrap: anywhere; }
 .vf-user .vf-user__main--capture, .vf-user .vf-user__main--confirm, .vf-user .vf-user__main--receipt { padding-bottom: 32px; }
 .vf-user .vf-user__greeting { margin: 0 0 6px; color: var(--vf-muted); font-size: 14px; }
@@ -41,7 +40,6 @@
 .vf-user .vf-user__primary { display: flex; position: relative; width: 100%; min-height: 56px; background: linear-gradient(110deg, #9259fb, #7839ef); font-size: 17px; font-weight: 700; border: 1px solid #a471ff40; box-shadow: 0 5px 20px #6b2ed715; }
 .vf-user .vf-user__primary > svg { position: absolute; right: 16px; }
 .vf-user .vf-user__secondary { width: 100%; min-height: 54px; margin-top: 12px; color: #d0c5e1; background: #211b33; border: 1px solid var(--vf-line); font-weight: 650; }
-.vf-user .vf-user__demo { color: var(--vf-muted); font-size: 12px; text-align: center; margin: 14px 0 24px; }
 .vf-user .vf-user__section { margin-top: 28px; }
 .vf-user .vf-user__muted { color: var(--vf-muted); font-size: 14px; }
 .vf-user .vf-user__row > .vf-user__muted { font-size: 11px; }

@@ -36,32 +36,29 @@ export function UserMobileApp({ user, onLogout }: UserMobileAppProps) {
       <div className="vf-user__shell">
         <header className="vf-user__header">
           {screen === 'home' ? <a className="vf-user__brand" href="#veriface-home" onClick={(event) => { event.preventDefault(); navigate('home'); }}><span className="vf-user__mark" aria-hidden="true">V</span>VeriFace</a> : <button type="button" className="vf-user__icon-button" aria-label="홈으로 돌아가기" onClick={() => navigate('home')}><Icon name="back" /></button>}
-          <span className="vf-user__badge">시연 모드</span>
           {screen === 'home' && <button type="button" className="vf-user__avatar vf-user__profile-button" aria-label="내 정보 보기" onClick={() => navigate('profile')}><Icon name="person" /></button>}
         </header>
         <main id="veriface-home" className={`vf-user__main vf-user__main--${screen}`}>
           {screen === 'home' && <p className="vf-user__greeting">{user.display_name}님, 안녕하세요</p>}
           <h1 ref={heading} tabIndex={-1}>{title}</h1>
           {screen === 'home' && <>
-            <section className="vf-user__account" aria-label="시연 계좌">
-              <div className="vf-user__row"><span>내 시연 계좌</span><span className="vf-user__account-dot" aria-hidden="true" /></div>
+            <section className="vf-user__account" aria-label="계좌">
+              <div className="vf-user__row"><span>내 계좌</span><span className="vf-user__account-dot" aria-hidden="true" /></div>
               <strong className="vf-user__balance">{won(balance)}</strong>
               <p>Veri 계좌 · 1234</p>
               <button type="button" className="vf-user__primary" onClick={() => navigate('input')}>송금하기 <Icon name="arrow" /></button>
             </section>
-            <p className="vf-user__demo">금액과 거래는 시연용이며 실제 이체되지 않습니다.</p>
             <section className="vf-user__section"><h2>최근 보낸 사람</h2>{recent.length ? <div className="vf-user__recipients">{recent.map((item) => <button type="button" key={item.account} onClick={() => { flow.setDraft({ recipient: item.recipient, account: item.account, amount: '' }); navigate('input'); }}><span className="vf-user__avatar"><Icon name="person" /></span><span>{item.recipient}</span></button>)}</div> : <p className="vf-user__muted">첫 송금을 마치면 여기에 표시돼요.</p>}</section>
-            <section className="vf-user__section vf-user__history"><div className="vf-user__row"><h2>최근 거래</h2><span className="vf-user__muted">이 화면의 시연 내역</span></div>{flow.transactions.length ? <ul>{flow.transactions.map((item) => <li key={item.id}><span className="vf-user__avatar"><Icon name="person" /></span><div><strong>{item.recipient}님에게 송금</strong><small>{date(item.createdAt)}</small></div><b>− {won(item.amount)}</b></li>)}</ul> : <div className="vf-user__empty"><Icon name="send" /><p>아직 송금 내역이 없어요</p><span>첫 시연 송금을 시작해 보세요.</span></div>}</section>
+            <section className="vf-user__section vf-user__history"><div className="vf-user__row"><h2>최근 거래</h2><span className="vf-user__muted">송금 내역</span></div>{flow.transactions.length ? <ul>{flow.transactions.map((item) => <li key={item.id}><span className="vf-user__avatar"><Icon name="person" /></span><div><strong>{item.recipient}님에게 송금</strong><small>{date(item.createdAt)}</small></div><b>− {won(item.amount)}</b></li>)}</ul> : <div className="vf-user__empty"><Icon name="send" /><p>아직 송금 내역이 없어요</p><span>첫 송금을 시작해 보세요.</span></div>}</section>
           </>}
           {screen === 'input' && <form className="vf-user__form" onSubmit={(event) => { event.preventDefault(); flow.submitDraft(); }}>
             <p className="vf-user__muted">받는 사람과 계좌, 보낼 금액을 입력해 주세요.</p>
             <label>받는 사람<input name="recipient" autoComplete="off" value={draft.recipient} maxLength={40} onChange={(event) => flow.setDraft({ ...draft, recipient: event.target.value })} placeholder="이름" required /></label>
-            <label>받는 계좌<input name="account" autoComplete="off" inputMode="numeric" value={draft.account} maxLength={40} onChange={(event) => flow.setDraft({ ...draft, account: event.target.value })} placeholder="시연 계좌번호" required /></label>
+            <label>받는 계좌<input name="account" autoComplete="off" inputMode="numeric" value={draft.account} maxLength={40} onChange={(event) => flow.setDraft({ ...draft, account: event.target.value })} placeholder="계좌번호" required /></label>
             <label>보낼 금액<div className="vf-user__amount-field"><input name="amount" autoComplete="off" inputMode="numeric" value={draft.amount} onChange={(event) => flow.setDraft({ ...draft, amount: event.target.value })} placeholder="0" aria-describedby="vf-user-balance" required /><span>원</span></div></label>
-            <p id="vf-user-balance" className="vf-user__muted">보낼 수 있는 시연 잔액 {won(balance)}</p>
+            <p id="vf-user-balance" className="vf-user__muted">보낼 수 있는 잔액 {won(balance)}</p>
             {flow.error && <p className="vf-user__error" role="alert">{flow.error}</p>}
             <button type="submit" className="vf-user__primary">다음 <Icon name="arrow" /></button>
-            <p className="vf-user__demo">실제 금융 계좌를 조회하거나 이체하지 않습니다.</p>
           </form>}
           {screen === 'confirm' && <>
             <div className="vf-user__transfer-summary"><span className="vf-user__avatar vf-user__avatar--large"><Icon name="person" /></span><p>{draft.recipient}님에게</p><strong>{won(Number(draft.amount))}</strong><span>보낼까요?</span></div>
@@ -69,7 +66,6 @@ export function UserMobileApp({ user, onLogout }: UserMobileAppProps) {
             <p className="vf-user__muted">이 송금 정보를 확인한 뒤 얼굴 인증으로 승인합니다. 처음 이용하면 얼굴 등록부터 진행해요.</p>
             <button type="button" className="vf-user__primary" onClick={flow.openCapture}>얼굴로 확인하기 <Icon name="arrow" /></button>
             <button type="button" className="vf-user__secondary" onClick={() => flow.setScreen('input')}>송금 정보 수정</button>
-            <p className="vf-user__demo">시연 거래입니다. 실제 이체는 발생하지 않습니다.</p>
           </>}
           {screen === 'capture' && <>
             <p className="vf-user__capture-transfer">{draft.recipient}님에게 <strong>{won(Number(draft.amount))}</strong><span className="vf-user__capture-account">받는 계좌 {draft.account}</span></p>
@@ -84,20 +80,17 @@ export function UserMobileApp({ user, onLogout }: UserMobileAppProps) {
             {!working && <button type="button" className="vf-user__primary" disabled={!context?.ready || flow.loadingContext} onClick={() => void flow.capture(context?.registered ? 'authenticate' : 'enroll')}>{context?.registered ? '송금 얼굴 인증 시작' : '얼굴 최초 등록 시작'}</button>}
             <button type="button" className="vf-user__secondary" onClick={() => { flow.cancel(); flow.setScreen('confirm'); }}>{working ? '촬영 취소' : '송금 정보로 돌아가기'}</button>
             {flow.result && <details className="vf-user__technical"><summary>검사 상세</summary><p>판정: {flow.result.session.final_decision}</p><p>세션: {flow.result.session.session_id}</p><p>{flow.result.user_message}</p><ul>{flow.result.session.gates.map((gate) => <li key={gate.gate_id}>{gate.gate_id} · {gate.status} · {gate.role}<br />{gate.reason_code}</li>)}</ul></details>}
-            <p className="vf-user__demo">시연 송금 승인용 얼굴 검사입니다. 계정 로그인 상태는 바뀌지 않습니다.</p>
           </>}
           {screen === 'receipt' && receipt && <div className="vf-user__receipt">
             <span className="vf-user__success" aria-hidden="true"><Icon name="check" /></span>
             <p className="vf-user__receipt-person">{receipt.recipient}님에게</p><strong className="vf-user__receipt-amount">{won(receipt.amount)}을 보냈어요</strong>
-            <dl className="vf-user__details"><div><dt>받는 계좌</dt><dd>{receipt.account}</dd></div><div><dt>보낸 금액</dt><dd>{won(receipt.amount)}</dd></div><div><dt>수수료</dt><dd>0원</dd></div><div><dt>시연 일시</dt><dd>{date(receipt.createdAt)}</dd></div></dl>
-            <p className="vf-user__demo">시연용 거래입니다. 실제 이체되지 않았습니다.</p>
+            <dl className="vf-user__details"><div><dt>받는 계좌</dt><dd>{receipt.account}</dd></div><div><dt>보낸 금액</dt><dd>{won(receipt.amount)}</dd></div><div><dt>수수료</dt><dd>0원</dd></div><div><dt>송금 일시</dt><dd>{date(receipt.createdAt)}</dd></div></dl>
             <button type="button" className="vf-user__primary" onClick={() => navigate('home')}>확인</button>
           </div>}
           {screen === 'profile' && <>
-            <div className="vf-user__profile"><span className="vf-user__avatar vf-user__avatar--large"><Icon name="person" /></span><h2>{user.display_name}님</h2><p>VeriFace 모바일 웹 시연</p></div>
-            <dl className="vf-user__details"><div><dt>시연 계좌</dt><dd>Veri 계좌 · 1234</dd></div><div><dt>얼굴 등록</dt><dd>{flow.loadingContext ? '확인 중' : context ? context.registered ? '등록됨' : '미등록' : '확인하지 못함'}</dd></div></dl>
-            <p className="vf-user__muted">시연 잔액과 거래 내역은 이 화면을 사용하는 동안만 유지됩니다. 얼굴 검사는 실제 계정 로그인이나 관리자 권한을 부여하지 않습니다.</p>
-            <button type="button" className="vf-user__secondary" onClick={() => { flow.cancel(); onLogout(); }}>시연 화면 나가기</button>
+            <div className="vf-user__profile"><span className="vf-user__avatar vf-user__avatar--large"><Icon name="person" /></span><h2>{user.display_name}님</h2><p>VeriFace</p></div>
+            <dl className="vf-user__details"><div><dt>계좌</dt><dd>Veri 계좌 · 1234</dd></div><div><dt>얼굴 등록</dt><dd>{flow.loadingContext ? '확인 중' : context ? context.registered ? '등록됨' : '미등록' : '확인하지 못함'}</dd></div></dl>
+            <button type="button" className="vf-user__secondary" onClick={() => { flow.cancel(); onLogout(); }}>나가기</button>
           </>}
         </main>
         {(screen === 'home' || screen === 'input' || screen === 'profile') && <nav className="vf-user__nav" aria-label="사용자 메뉴">{([{ screen: 'home', label: '홈', icon: 'home' }, { screen: 'input', label: '송금', icon: 'send' }, { screen: 'profile', label: '내 정보', icon: 'person' }] as const).map((item) => <button type="button" key={item.screen} aria-current={screen === item.screen ? 'page' : undefined} onClick={() => navigate(item.screen)}><Icon name={item.icon} /><span>{item.label}</span></button>)}</nav>}

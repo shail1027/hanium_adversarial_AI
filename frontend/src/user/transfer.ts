@@ -6,7 +6,7 @@ export function validateDraft(draft: Draft, balance: number): string | null {
   if (!draft.recipient.trim()) return '받는 사람을 입력해 주세요.';
   if ((!/^[0-9 -]+$/.test(draft.account.trim()) || !/^\d{5,30}$/.test(draft.account.replace(/[ -]/g, '')))) return '계좌번호를 숫자 5~30자로 입력해 주세요.';
   if (!/^[1-9]\d*$/.test(draft.amount) || !Number.isSafeInteger(Number(draft.amount))) return '금액은 1원 이상의 정수로 입력해 주세요.';
-  if (Number(draft.amount) > balance) return '시연 잔액보다 많은 금액을 보낼 수 없어요.';
+  if (Number(draft.amount) > balance) return '잔액보다 많은 금액을 보낼 수 없어요.';
   return null;
 }
 
