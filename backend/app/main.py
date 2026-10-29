@@ -111,7 +111,8 @@ def create_app(config=None, runtime=None, clock=time.monotonic):
     def health():
         return {"status": "ok", "service": "veriface-local-face-api",
                 "hc160_runtime_ready": config.ready(), "hc160_runtime_missing": config.blockers(),
-                "account_authentication": "not_connected", "session_storage": "single_process"}
+                "account_authentication": "not_connected", "session_storage": "single_process",
+                "runtime_identity": service.runtime_identity}
 
     @app.post("/api/auth/login")
     def login(payload: LoginRequest):

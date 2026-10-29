@@ -16,6 +16,7 @@ import time
 
 from .hc160_runtime import HC160Runtime
 from .registration_store import Registry
+from .runtime_metadata import DISPLAY_LAYERS, artifact_version, gate_role, runtime_identity
 
 
 logger = logging.getLogger(__name__)
@@ -47,11 +48,13 @@ class Capture:
     last_timestamp: float = -1
     token_id: str | None = None
     token_deadline: float = 0
+    runtime_identity: dict = field(default_factory=dict)
 
 
 class CaptureService:
     def __init__(self, config, runtime=None, clock=time.monotonic):
         self.config = config
+        self.runtime_identity = runtime_identity(config.repo_path)
         self.runtime = runtime or HC160Runtime(config)
         self.registry = Registry(config.storage_root) if config.storage_root else None
         self.clock = clock
@@ -90,7 +93,8 @@ class CaptureService:
                 self.inference_slot.release()
             now = self.clock()
             capture = Capture(session.session_id, challenge.nonce, owner, self.config.user_id,
-                              source_ip, context, operation, now + 30, _utc_now())
+                              source_ip, context, operation, now + 30, _utc_now(),
+                              runtime_identity=self.runtime_identity)
             self.captures[session.session_id] = capture
             instruction = ("얼굴을 중앙에 두고 고개를 천천히 왼쪽으로 돌려주세요."
                            if challenge.kind == "HEAD_LEFT" else "얼굴을 중앙에 두고 고개를 천천히 오른쪽으로 돌려주세요.")
@@ -267,11 +271,11 @@ def _auth_result(c, result):
                 "STEP_UP": "추가 인증이 필요합니다. 연결된 추가 인증 수단이 없어 승인되지 않았습니다.",
                 "REJECT": "얼굴 인증이 거부되었습니다."}
     gates = [{"gate_id": g["gate"], "label": g["gate"],
-              "status": "NOT_EVALUATED" if g["status"] == "SCORED" else g["status"],
-              "role": "SCORING" if g["status"] == "SCORED" else "BLOCKING",
+              "status": g["status"], "role": gate_role(g),
+              "display_layer": DISPLAY_LAYERS.get(g["gate"]),
               "latency_ms": g.get("latency_ms"), "score": g.get("score"), "threshold": g.get("threshold"),
               "reason_code": ",".join(g.get("reason_codes", [])) or None,
-              "provenance": {"artifact_id": "hc160-runtime", "artifact_version": "db1e205",
+              "provenance": {"artifact_id": "hc160-runtime", "artifact_version": artifact_version(getattr(c, "runtime_identity", {})),
                              "model_version": "runtime", "policy_version": "face-auth-policy-v1"}}
              for g in result.get("gates", [])]
     logger.info("face_attempt %s", json.dumps({
@@ -287,6 +291,7 @@ def _auth_result(c, result):
                              for key in ("used", "limit", "exceeded")},
             "gates": gates, "decision_provenance": {
                 "source": "hc160_runtime", "security_profile": "FULL",
+                "runtime_identity": getattr(c, "runtime_identity", {}),
                 "calibration_artifact_id": result.get("calibration", {}).get("artifact_id"),
             },
             "audit": {"model_source": "hc160_runtime", "evidence_digest": result.get("evidence_digest"),
@@ -308,7 +313,8 @@ def _error_result(c, code):
     return {"session": {"schema_version": "1.0", "session_id": c.session_id, "status": "ERROR",
             "final_decision": "ERROR", "created_at": c.created_at, "completed_at": _utc_now(),
             "latency_ms": None, "attempt_count": 1, "query_budget": {"used": None, "limit": None, "exceeded": None},
-            "gates": [], "decision_provenance": {"source": "hc160_runtime", "security_profile": "FULL"},
+            "gates": [], "decision_provenance": {"source": "hc160_runtime", "security_profile": "FULL",
+                                                    "runtime_identity": getattr(c, "runtime_identity", {})},
             "audit": {"error_code": code}}, "authorized": False, "account_authenticated": False,
             "token_id": None, "user_message": (
                 "처리 시간이 초과되었습니다. 승인되지 않았습니다. 처리가 멈추면 서버를 재시작하세요."

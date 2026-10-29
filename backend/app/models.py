@@ -68,8 +68,9 @@ class GateProvenance(BaseModel):
 class GateResultDto(BaseModel):
     gate_id: str
     label: str | None = None
-    status: Literal["PASS", "FAIL", "ERROR", "TIMEOUT", "NOT_EVALUATED", "SKIPPED", "UNAVAILABLE"]
+    status: Literal["SCORED", "PASS", "FAIL", "ERROR", "TIMEOUT", "NOT_EVALUATED", "SKIPPED", "UNAVAILABLE"]
     role: Literal["BLOCKING", "SCORING", "ESCALATION"]
+    display_layer: Literal["L0", "L1", "L2", "L2b", "L3", "L4"] | None = None
     latency_ms: float | None
     score: str | float | None
     threshold: str | float | None
@@ -88,7 +89,7 @@ class SessionResultDto(BaseModel):
     attempt_count: int
     query_budget: QueryBudget
     gates: list[GateResultDto]
-    decision_provenance: dict[str, str]
+    decision_provenance: dict[str, Any]
     audit: dict[str, Any] | None = None
 
 

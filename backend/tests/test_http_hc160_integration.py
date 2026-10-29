@@ -42,6 +42,7 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
         gates = [cli.GateResult(name, cli.GateStatus.PASS, score=1., threshold=.6)
                  for name in ("frame_integrity", "quality", "single_face", "camera_motion", "content_replay",
                               "illumination_challenge", "passive_pad", "active_liveness", "continuity", "identity")]
+        gates.append(cli.GateResult("adversarial", cli.GateStatus.SCORED, score=.25))
         return SimpleNamespace(baseline=SimpleNamespace(total_frames=len(frames), valid_face_frames=len(frames)),
                                gate_results=gates, adversarial=None)
     with patch.object(cli, "MTCNNFaceDetector", return_value=detector), \
@@ -71,6 +72,14 @@ def test_browser_enrollment_then_full_policy_uses_same_session_and_pair(tmp_path
         body = response.json()
         assert body["session"]["final_decision"] == "STEP_UP", body
         assert body["token_id"] is None
+        by_id = {g["gate_id"]: g for g in body["session"]["gates"]}
+        assert by_id["adversarial"]["status"] == "SCORED"
+        assert by_id["adversarial"]["role"] == "SCORING"
+        assert by_id["adversarial"]["display_layer"] == "L3"
+        assert by_id["identity"]["role"] == "SCORING"
+        identity = client.get("/api/health").json()["runtime_identity"]
+        assert body["session"]["decision_provenance"]["runtime_identity"] == identity
+        assert by_id["identity"]["provenance"]["artifact_version"] == identity["backend_commit"]
         assert body["session"]["query_budget"]["used"] == 1
         assert body["session"]["query_budget"]["exceeded"] is False
         assert body["session"]["audit"]["evidence_digest"]
