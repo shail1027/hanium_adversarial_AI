@@ -1,3 +1,4 @@
+import { checkMotion } from './admin-motion-checks.mjs';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -22,6 +23,7 @@ let browser;
 try {
 for(let i=0;i<100;i++) { try { const res=await fetch('http://127.0.0.1:'+port+'/admin-check.html'); if(res.ok) break; } catch {} await new Promise(resolve=>setTimeout(resolve,100)); }
 browser = await chromium.launch({headless:true, channel:process.env.ADMIN_BROWSER_CHANNEL ?? 'chrome'});
+await checkMotion(browser, 'http://127.0.0.1:'+port+'/admin-check.html', root);
 const page = await browser.newPage({viewport:{width:1440,height:1000}});
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/api/**',route=>route.fulfill({status:503,body:'Preview: static fallback'}));
@@ -32,12 +34,12 @@ await page.getByText('PGD',{exact:true}).waitFor();
 assert.equal(await page.locator('h1').evaluate(el=>getComputedStyle(el).color),'rgb(244, 241, 250)');
 assert.equal(await page.locator('.admin-metrics strong').first().evaluate(el=>getComputedStyle(el).color),'rgb(244, 241, 250)');
 assert.equal(await page.locator('td').first().evaluate(el=>getComputedStyle(el).color),'rgb(244, 241, 250)');
-await page.screenshot({path:shots+'/overview-desktop.png',fullPage:true});
+await page.screenshot({animations:'disabled',path:shots+'/overview-desktop.png',fullPage:true});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
 for (const [menu,file] of [['인증 결과','authentication'],['공격 분석','attack'],['방어 분석','defense'],['실험 기록','experiments']]) {
  await page.getByRole('navigation',{name:'관리자 메뉴'}).getByRole('button',{name:menu,exact:true}).click();
- if(menu==='인증 결과') assert.equal(await page.locator('.vf-detail-grid dd').first().evaluate(el=>getComputedStyle(el).color),'rgb(244, 241, 250)');
- await page.screenshot({path:shots+'/'+file+'-desktop.png',fullPage:menu!=='방어 분석' && menu!=='실험 기록'});
+ if(menu==='인증 결과') assert.equal(await page.locator('.admin-page:not([hidden]) .vf-detail-grid dd').first().evaluate(el=>getComputedStyle(el).color),'rgb(244, 241, 250)');
+ await page.screenshot({animations:'disabled',path:shots+'/'+file+'-desktop.png',fullPage:menu!=='방어 분석' && menu!=='실험 기록'});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,menu+' desktop overflow');
 }
 await page.getByRole('navigation').getByRole('button',{name:'인증 결과',exact:true}).click();
@@ -63,11 +65,11 @@ for(const width of [1280,390,360]) {
  if(width<761) await page.getByRole('button',{name:'메뉴 열기',exact:true}).click();
  await page.getByRole('navigation').getByRole('button',{name:'개요',exact:true}).click();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'overview '+width);
- await page.screenshot({path:shots+'/overview-'+width+'.png',fullPage:true});
+ await page.screenshot({animations:'disabled',path:shots+'/overview-'+width+'.png',fullPage:true});
  if(width<761) await page.getByRole('button',{name:'메뉴 열기',exact:true}).click();
  await page.getByRole('navigation').getByRole('button',{name:'공격 분석',exact:true}).click();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'attack '+width);
- if(width===390) await page.screenshot({path:shots+'/attack-mobile.png',fullPage:true});
+ if(width===390) await page.screenshot({animations:'disabled',path:shots+'/attack-mobile.png',fullPage:true});
 }
 for (const menu of ['인증 결과','방어 분석','실험 기록']) {
  await page.getByRole('button',{name:'메뉴 열기',exact:true}).click();
@@ -82,8 +84,8 @@ await page.getByRole('heading',{name:'공격별 결과',exact:true}).waitFor();
 assert.equal(await page.locator('.metric-ratio').innerText(),'미집계');
 await page.getByRole('button',{name:'메뉴 열기',exact:true}).click();
 await page.getByRole('navigation').getByRole('button',{name:'방어 분석',exact:true}).click();
-await page.getByText('미집계',{exact:true}).first().waitFor();
-assert.equal(await page.getByText('미집계',{exact:true}).count(),6);
+await page.locator('.admin-page:not([hidden])').getByText('미집계',{exact:true}).first().waitFor();
+assert.equal(await page.locator('.admin-page:not([hidden])').getByText('미집계',{exact:true}).count(),6);
 await page.unroute('**/forensics/attack_sessions.csv');
 await page.unroute('**/defense/*.csv');
 // A failed source must not prevent independent HC160 inspection.
@@ -101,11 +103,11 @@ await page.getByRole('heading',{name:'전달받은 실제 얼굴 API 결과',exa
 await page.getByText('SCORED · 점수 산출',{exact:true}).waitFor();
 await page.getByText('NOT_EVALUATED · 미평가',{exact:true}).waitFor();
 assert.equal(await page.getByText('미분류 (null)',{exact:true}).count(),2);
-assert.ok((await page.locator('main').innerText()).includes('hc160_runtime'));
-await page.getByText('provenance · 실행 artifact / 모델 / 정책',{exact:true}).first().click();
+assert.ok((await page.locator('.admin-page:not([hidden])').innerText()).includes('hc160_runtime'));
+await page.getByRole('button',{name:'provenance · 실행 artifact / 모델 / 정책',exact:true}).first().click();
 await page.getByText('backend-test-dirty',{exact:true}).first().waitFor();
 await page.getByRole('button',{name:'다시 불러오기'}).waitFor();
-await page.screenshot({path:shots+'/runtime-test-mobile.png',fullPage:true});
+await page.screenshot({animations:'disabled',path:shots+'/runtime-test-mobile.png',fullPage:true});
 await page.getByRole('button',{name:'로그아웃',exact:false}).click();
 assert.equal(await page.title(),'로그아웃 콜백 확인');
 assert.deepEqual(errors,[]);

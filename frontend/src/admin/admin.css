@@ -116,9 +116,6 @@
 .veriface-admin .vf-secondary-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
 .veriface-admin .vf-timeline-list { list-style: none; padding: 0; margin: 0; }
 .veriface-admin .vf-timeline-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-bottom: 1px solid var(--admin-line); padding: 12px 0; font-size: 11px; }
-.veriface-admin .vf-tooltip { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; border: 1px solid #78628b; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; }
-.veriface-admin .vf-tooltip > span { display: none; position: absolute; top: 22px; left: 0; z-index: 5; width: 200px; white-space: normal; background: #352747; border: 1px solid #78628b; padding: 12px; color: #f4f1fa; }
-.veriface-admin .vf-tooltip:hover > span, .veriface-admin .vf-tooltip:focus > span { display: block; }
 @media (min-width: 1600px) { .veriface-admin .vf-session-layout { grid-template-columns: minmax(0,1fr) 380px; } }
 @media (max-width: 1279px) { .veriface-admin .admin-overview-grid { grid-template-columns: minmax(0,1fr); } .veriface-admin .admin-context { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; } .veriface-admin .admin-main { padding: 24px; } .veriface-admin .admin-source-badge { display: none; } .veriface-admin .vf-family-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 760px) { .veriface-admin .admin-sidebar { position: relative; width: 100%; padding: 16px; display: grid; grid-template-columns: 1fr auto; align-items: center; } .veriface-admin .admin-brand { padding: 0; } .veriface-admin .admin-brand strong { font-size: 21px; } .veriface-admin .admin-sidebar nav { display: none; grid-column: 1/-1; margin-top: 16px; } .veriface-admin .admin-sidebar nav.is-open { display: grid; } .veriface-admin .admin-sidebar-footer { grid-column: 1/-1; margin: 0; padding: 12px 0 0; } .veriface-admin .admin-sidebar-footer > span, .veriface-admin .admin-sidebar-footer p { display: none; } .veriface-admin .admin-sidebar-footer button { min-height: 44px; padding: 8px; text-align: right; font-size: 12px; } .veriface-admin .admin-menu-toggle { display: block; } .veriface-admin .admin-main { margin: 0; padding: 24px 16px; } .veriface-admin .admin-header { align-items: flex-start; } .veriface-admin h1 { font-size: 28px; } .veriface-admin .admin-profile { display: none; } .veriface-admin .admin-metrics, .veriface-admin .admin-context, .veriface-admin .vf-source-list, .veriface-admin .vf-secondary-grid { grid-template-columns: minmax(0,1fr); } .veriface-admin .vf-stat-card { padding: 20px; } .veriface-admin .vf-panel { padding: 20px 16px; } .veriface-admin .vf-family-grid, .veriface-admin .vf-detail-grid { grid-template-columns: minmax(0,1fr); } .veriface-admin .admin-header p { font-size: 12px; } .veriface-admin .admin-context { gap: 0; } .veriface-admin .vf-gate-card { padding: 16px; } }
@@ -126,4 +123,68 @@
 
 .veriface-admin .vf-table-wrap { max-height: 560px; }
 .veriface-admin .admin-header h1 { scroll-margin-top: 32px; }
-.veriface-admin .vf-tooltip { color: #cbb1f4; }
+
+/* Interaction styles stay inside the admin root, including native top-layer popovers. */
+.veriface-admin .admin-page[hidden] { display: none; }
+.veriface-admin .admin-nav-reveal { min-height: 0; }
+.veriface-admin .admin-sidebar nav button { position: relative; isolation: isolate; }
+.veriface-admin .admin-sidebar nav button::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(110deg,#7044d9,#5028ab); opacity: 0; z-index: -1; }
+.veriface-admin .admin-sidebar nav button::after { content: ''; position: absolute; left: 4px; top: 16px; bottom: 16px; width: 3px; background: #d5bdff; border-radius: 4px; transform: scaleY(0); }
+.veriface-admin .admin-sidebar nav button[aria-current=page] { background: transparent; }
+.veriface-admin .admin-sidebar nav button[aria-current=page]::before { opacity: 1; }
+.veriface-admin .admin-sidebar nav button[aria-current=page]::after { transform: scaleY(1); }
+.veriface-admin tbody tr.selected, .veriface-admin tbody tr.selected:hover { background: #392751; box-shadow: inset 3px 0 #b18afc; }
+.veriface-admin tbody tr:focus-within { background: #30233f; }
+.veriface-admin button:active:not(:disabled) { transform: translateY(1px); }
+.veriface-admin button:disabled { cursor: wait; opacity: .7; }
+.veriface-admin .admin-refresh { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: -8px 0 20px; min-height: 44px; }
+.veriface-admin .admin-refresh > span { color: var(--admin-muted); font-size: 12px; }
+.veriface-admin .admin-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #65517e; border-top-color: #dfceff; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.veriface-admin .admin-skeleton-row { padding: 16px 0; }
+.veriface-admin .admin-skeleton-line { display: block; height: 16px; width: 60%; background: #362b49; border-radius: 6px; margin: 8px 0; }
+.veriface-admin .admin-skeleton-line:last-child { height: 32px; width: 85%; }
+.veriface-admin .admin-skeletons.admin-metrics .vf-stat-card { min-height: 208px; }
+.veriface-admin .admin-disclosure { border-top: 1px solid var(--admin-line); margin-top: 16px; padding-top: 8px; }
+.veriface-admin .admin-disclosure > button { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; background: transparent; color: #cbb1f4; border-color: transparent; }
+.veriface-admin .admin-chevron { display: inline-block; font-size: 22px; line-height: 1; }
+.veriface-admin .admin-disclosure > button[aria-expanded=true] .admin-chevron { transform: rotate(90deg); }
+.veriface-admin .admin-disclosure-body { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; }
+.veriface-admin .admin-disclosure-body.is-open { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.veriface-admin .admin-disclosure-body > div { min-height: 0; overflow: hidden; }
+.veriface-admin .admin-disclosure-content { padding: 4px 8px 12px; }
+.veriface-admin .admin-help { display: inline-flex; vertical-align: middle; }
+.veriface-admin .admin-help > button { min-width: 44px; min-height: 44px; padding: 8px; background: transparent; border: 0; color: #cbb1f4; }
+.veriface-admin .admin-tooltip { position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow: auto; white-space: normal; overflow-wrap: anywhere; padding: 12px 16px; color: #f4f1fa; background: #352747; border: 1px solid #9774be; border-radius: 12px; font: 13px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 8px 32px #0005; }
+.veriface-admin .admin-tooltip::backdrop { background: transparent; pointer-events: none; }
+@keyframes vf-admin-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vf-admin-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes vf-admin-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .veriface-admin .admin-page:not([hidden]) { animation: vf-admin-enter 180ms ease-out; }
+  .veriface-admin .admin-card-entry > .vf-stat-card { animation: vf-admin-enter 240ms ease-out backwards; }
+  .veriface-admin .admin-card-entry > .vf-stat-card:nth-child(2) { animation-delay: 45ms; }
+  .veriface-admin .admin-card-entry > .vf-stat-card:nth-child(3) { animation-delay: 90ms; }
+  .veriface-admin .vf-bar-track > span, .veriface-admin .vf-stacked-bar { animation: vf-admin-draw 280ms ease-out; transform-origin: left; }
+  .veriface-admin .admin-sidebar nav button::before { transition: opacity 180ms ease; }
+  .veriface-admin .admin-sidebar nav button::after { transition: transform 180ms ease; }
+  .veriface-admin tbody tr, .veriface-admin select { transition: background-color 140ms, border-color 140ms; }
+  .veriface-admin .admin-chevron { transition: transform 180ms ease; }
+  .veriface-admin .admin-disclosure-body { transition: grid-template-rows 180ms ease, opacity 180ms ease, visibility 180ms; }
+  .veriface-admin .admin-spinner { animation: vf-admin-spin 700ms linear infinite; }
+}
+@media (max-width: 760px) {
+  .veriface-admin .admin-nav-reveal { grid-column: 1/-1; display: grid; grid-template-rows: 0fr; visibility: hidden; opacity: 0; background: transparent; border-radius: 12px; }
+  .veriface-admin .admin-nav-reveal.is-open { grid-template-rows: 1fr; visibility: visible; opacity: 1; background: #1c162b; }
+  .veriface-admin .admin-sidebar .admin-nav-reveal nav { display: grid; min-height: 0; overflow: hidden; margin: 0; transform: translateY(-6px); }
+  .veriface-admin .admin-sidebar .admin-nav-reveal.is-open nav { transform: translateY(0); }
+}
+@media (max-width: 760px) and (prefers-reduced-motion: no-preference) {
+  .veriface-admin .admin-nav-reveal { transition: grid-template-rows 180ms ease, opacity 180ms, visibility 180ms, background-color 180ms; }
+  .veriface-admin .admin-nav-reveal nav { transition: transform 180ms ease; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .veriface-admin *, .veriface-admin *::before, .veriface-admin *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .veriface-admin button:active:not(:disabled), .veriface-admin .admin-sidebar .admin-nav-reveal nav { transform: none; }
+}
+
+.veriface-admin .admin-page[data-menu=overview] > .admin-metrics > .vf-stat-card { min-height: 208px; }

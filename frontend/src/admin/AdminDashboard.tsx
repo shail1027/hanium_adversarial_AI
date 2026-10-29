@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { loadDashboardData, loadDefenseDashboardData, loadHc160DashboardData } from '../data';
 import type { FaceAuthVerifyResponse, LoginResponse } from '../api';
 import { AttackDashboard } from './AttackDashboard';
 import { AuthenticationResults, DefenseAnalysis, ExperimentRecords, Panel, RuntimeResultPanel } from './ResultPanels';
 import { attackSummary, ratio } from './model';
+import { InfoTooltip, Skeleton } from './Interactions';
 import './admin.css';
 
 export interface AdminDashboardProps {
@@ -32,41 +33,82 @@ function Icon({ name }: { name: string }) {
   return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.result}</svg>;
 }
 function useDataset<T>(loader: () => Promise<T>) {
-  const [state, setState] = useState<{ data?: T; error?: string }>({});
+  const [state, setState] = useState<{ data?: T; error?: string; loading: boolean }>({ loading: true });
   const [attempt, setAttempt] = useState(0);
+  const request = useRef<{ attempt: number; promise: Promise<T> }>();
   useEffect(() => {
     let active = true;
-    setState({});
-    loader().then(data => { if (active) setState({ data }); }).catch(() => { if (active) setState({ error: '데이터를 불러오지 못했습니다.' }); });
+    setState(previous => ({ ...previous, loading: true }));
+    // Share the in-flight request across StrictMode effect replay, never across users.
+    if (request.current?.attempt !== attempt) request.current = { attempt, promise: loader() };
+    request.current.promise.then(data => {
+      if (active) setState({ data, loading: false });
+    }).catch(() => {
+      if (active) setState(previous => ({ ...previous, loading: false, error: '데이터를 불러오지 못했습니다.' }));
+    });
     return () => { active = false; };
   }, [loader, attempt]);
-  return { ...state, retry: () => setAttempt(value => value + 1) };
+  return { ...state, retry: () => { if (!state.loading) setAttempt(value => value + 1); } };
 }
-function DataState({ source, state }: { source: string; state: { error?: string; retry: () => void } }) {
-  return <Panel title={source}>{state.error ? <div role="alert"><p>{state.error} 잠시 후 다시 시도해 주세요.</p><button type="button" onClick={state.retry}>다시 불러오기</button></div> : <p role="status">데이터를 불러오는 중입니다.</p>}</Panel>;
+function DataState({ source, state }: { source: string; state: { error?: string; loading: boolean; retry: () => void } }) {
+  return <Panel title={source}>{state.error ? <div role={state.loading ? 'status' : 'alert'}><p>{state.error} 잠시 후 다시 시도해 주세요.</p><button type="button" disabled={state.loading} onClick={state.retry}>{state.loading && <span className="admin-spinner" aria-hidden="true"/>}{state.loading ? '다시 불러오는 중' : '다시 불러오기'}</button></div> : <Skeleton />}</Panel>;
 }
 export function AdminDashboard({ user, onLogout, runtimeResult }: AdminDashboardProps) {
   const [menu, setMenu] = useState<Menu>('overview');
   const [navOpen, setNavOpen] = useState(false);
+  const [visited, setVisited] = useState<Set<Menu>>(() => new Set(['overview']));
+  const [cardsEntered, setCardsEntered] = useState(false);
+  const menuToggle = useRef<HTMLButtonElement>(null);
+  const navigation = useRef<HTMLElement>(null);
+  const scrollPositions = useRef<Partial<Record<Menu, number>>>({});
+  const navigating = useRef(false);
+  useLayoutEffect(() => {
+    if (!navigating.current) return;
+    title.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: scrollPositions.current[menu] ?? 0, behavior: 'instant' });
+    navigating.current = false;
+  }, [menu]);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 760px)');
+    const sync = () => {
+      if (navigation.current) navigation.current.inert = query.matches && !navOpen;
+    };
+    sync(); query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, [navOpen]);
   const title = useRef<HTMLHeadingElement>(null);
   const attack = useDataset(loadDashboardData);
   const defense = useDataset(loadDefenseDashboardData);
   const hc = useDataset(loadHc160DashboardData);
   const active = menus.find(item => item.id === menu)!;
   const summary = attack.data ? attackSummary(attack.data.attackSessions) : undefined;
-  function navigate(next: Menu) { setMenu(next); setNavOpen(false); requestAnimationFrame(() => { title.current?.focus(); title.current?.scrollIntoView({ block: 'start' }); }); }
+  const currentSources = menu === 'authentication' ? [hc] : menu === 'defense' ? [defense] : menu === 'experiments' ? [defense, hc] : [attack];
+  const refreshing = currentSources.some(source => source.loading);
+  function navigate(next: Menu) {
+    document.querySelectorAll<HTMLElement>('.veriface-admin [popover]:popover-open').forEach(element => element.hidePopover());
+    setNavOpen(false);
+    if (next === menu) { title.current?.focus({ preventScroll: true }); return; }
+    scrollPositions.current[menu] = window.scrollY;
+    navigating.current = true;
+    if (menu === 'overview' && summary) setCardsEntered(true);
+    setVisited(previous => new Set([...previous, next]));
+    setMenu(next);
+  }
   return <div className="veriface-admin">
     <a className="admin-skip" href="#admin-content">본문으로 이동</a>
     <aside className="admin-sidebar">
       <div className="admin-brand"><svg width="40" height="48" viewBox="0 0 40 48" aria-hidden="true"><path d="m2 4 17 10 3 30Z" fill="#BB88FC"/><path d="M38 4 22 44l-3-30Z" fill="#8B5CF6"/></svg><div><strong>VeriFace</strong><small>SECURITY CONSOLE</small></div></div>
-      <button type="button" className="admin-menu-toggle" aria-expanded={navOpen} aria-controls="admin-navigation" onClick={() => setNavOpen(!navOpen)}>메뉴 {navOpen ? '닫기' : '열기'}</button>
-      <nav id="admin-navigation" className={navOpen ? 'is-open' : ''} aria-label="관리자 메뉴">{menus.map(item => <button type="button" key={item.id} aria-current={menu === item.id ? 'page' : undefined} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.title}</span></button>)}</nav>
+      <button ref={menuToggle} type="button" className="admin-menu-toggle" aria-expanded={navOpen} aria-controls="admin-navigation" onClick={() => setNavOpen(!navOpen)}>메뉴 {navOpen ? '닫기' : '열기'}</button>
+      <div className={`admin-nav-reveal ${navOpen ? 'is-open' : ''}`}><nav ref={navigation} onKeyDown={event => { if (event.key === 'Escape' && window.matchMedia('(max-width: 760px)').matches) { setNavOpen(false); menuToggle.current?.focus(); } }} id="admin-navigation" className={navOpen ? 'is-open' : ''} aria-label="관리자 메뉴">{menus.map(item => <button type="button" key={item.id} aria-current={menu === item.id ? 'page' : undefined} onClick={() => navigate(item.id)}><Icon name={item.icon}/><span>{item.title}</span></button>)}</nav></div>
       <div className="admin-sidebar-footer"><span>VeriFace Workspace</span><button type="button" onClick={onLogout}>↪ 로그아웃</button></div>
     </aside>
     <main className="admin-main" id="admin-content">
       <header className="admin-header"><div><p className="admin-eyebrow">VERIFACE / OVERVIEW</p><h1 ref={title} tabIndex={-1}>{active.title === '개요' ? '보안 현황' : active.title}</h1><p>{active.subtitle}</p></div><div className="admin-profile"><span className="admin-source-badge">실험 데이터</span><span className="admin-avatar" aria-hidden="true">V</span><div><strong>{user.display_name}</strong><small>관리자</small></div></div></header>
-      {menu === 'overview' && <>
-        <div className="admin-metrics"><article className="vf-stat-card"><span><Icon name="result"/>분석 표본</span><strong>{summary ? summary.total.toLocaleString('ko-KR') : '미집계'}</strong><small>공격 데이터셋 · 전체 표본</small></article><article className="vf-stat-card"><span><Icon name="shield"/>공격 후 승인 비율</span><strong className="metric-ratio">{summary ? ratio(summary.accepted, summary.total) : '미집계'}</strong><small>방어 전 공격 결과 · 승인 / 전체</small></article><article className="vf-stat-card"><span><Icon name="chart"/>우선 검토 표본</span><strong>{summary ? summary.review.toLocaleString('ko-KR') : '미집계'}</strong><small>High / Critical · 공격 데이터셋</small></article></div>
+      <div className="admin-refresh"><button type="button" disabled={refreshing} onClick={() => currentSources.forEach(source => source.retry())}>{refreshing && <span className="admin-spinner" aria-hidden="true"/>}{refreshing ? '불러오는 중' : '데이터 새로고침'}</button><span role="status">{refreshing && currentSources.some(source => source.data) ? '기존 결과를 유지하며 갱신 중입니다.' : ''}</span></div>
+      {currentSources.filter(source => source.data && source.error).map((source, index) => <DataState key={index} source="데이터 갱신" state={source}/>)}
+      <div className="admin-page" data-menu="overview" hidden={menu !== 'overview'}>
+
+        {attack.loading && !attack.data ? <Skeleton cards /> : <div className={`admin-metrics ${summary && !cardsEntered ? 'admin-card-entry' : ''}`} onAnimationEnd={event => { if (event.target === event.currentTarget.lastElementChild) setCardsEntered(true); }}><article className="vf-stat-card"><span><Icon name="result"/>분석 표본</span><strong>{summary ? summary.total.toLocaleString('ko-KR') : '미집계'}</strong><small>공격 데이터셋 · 전체 표본</small></article><article className="vf-stat-card"><span><Icon name="shield"/>공격 후 승인 비율{summary && <InfoTooltip label="공격 후 승인 수치와 분모 보기" text={ratio(summary.accepted, summary.total)} />}</span><strong className="metric-ratio">{summary ? ratio(summary.accepted, summary.total) : '미집계'}</strong><small>방어 전 공격 결과 · 승인 / 전체</small></article><article className="vf-stat-card"><span><Icon name="chart"/>우선 검토 표본</span><strong>{summary ? summary.review.toLocaleString('ko-KR') : '미집계'}</strong><small>High / Critical · 공격 데이터셋</small></article></div>}
         <div className="admin-overview-grid"><div className="admin-primary">
           {attack.data ? <Panel title="공격별 결과" eyebrow="ATTACK SUMMARY"><div className="vf-section-heading"><p className="vf-muted">공격 유형별 표본과 결과를 비교합니다.</p><button type="button" onClick={() => navigate('attack')}>상세 분석 →</button></div><div className="vf-table-wrap" role="region" aria-label="공격별 결과 요약" tabIndex={0}><table><thead><tr><th>공격 유형</th><th>표본 수</th><th>공격 후 승인 / 전체</th><th>High / Critical</th></tr></thead><tbody>{attack.data.familyRows.map(row => <tr key={row.attack_family}><td><span className="admin-family-icon"><Icon name="shield"/></span><strong>{row.attack_family.toUpperCase()}</strong></td><td>{row.sessions.toLocaleString('ko-KR')}</td><td>{ratio(row.accepted_after_attack, row.sessions)}</td><td>{row.high + row.critical}</td></tr>)}</tbody></table></div>{!attack.data.familyRows.length && <p>자료 없음</p>}<p className="admin-table-note">출처: 공격 실험 데이터셋 · 방어 적용 전 결과</p></Panel> : <DataState source="공격 실험" state={attack} />}
           <Panel title="실제 인증 기록" eyebrow="AUTHENTICATION HISTORY"><div className="vf-empty-state"><span className="vf-empty-icon" aria-hidden="true">◎</span><h3>인증 기록 연결을 기다리고 있습니다</h3><p>기록 연동 후 인증 결과를 이곳에서 확인할 수 있습니다.</p><button type="button" onClick={() => navigate('authentication')}>분석 세션 보기 →</button></div></Panel>
@@ -74,11 +116,15 @@ export function AdminDashboard({ user, onLogout, runtimeResult }: AdminDashboard
           <Panel title="최근 분석 세션" eyebrow="SESSION HISTORY">{hc.data ? <ul className="admin-recent">{[...hc.data.sessionSummaries].sort((a,b) => b.created_at.localeCompare(a.created_at)).slice(0,3).map(row => <li key={row.session_id}><span className="vf-pill">{row.final_decision}</span><strong>{row.session_id}</strong><small>{row.created_at}</small></li>)}</ul> : <p>{hc.error ?? '분석 기록을 불러오는 중입니다.'}</p>}<button type="button" onClick={() => navigate('experiments')}>출처·실험 기록 →</button></Panel>
           <div className="admin-source-note"><Icon name="file"/><p>데이터 출처와 모델 버전은<br/>실험 기록에서 확인할 수 있습니다.</p></div>
         </aside></div>
-      </>}
-      {menu === 'authentication' && <>{runtimeResult && <RuntimeResultPanel result={runtimeResult} />}{hc.data ? <AuthenticationResults data={hc.data} /> : <><Panel title="실제 인증 기록"><p>인증 기록 연결을 기다리고 있습니다.</p></Panel><DataState source="HC160 분석 세션" state={hc} /></>}</>}
-      {menu === 'attack' && (attack.data ? <AttackDashboard data={attack.data} /> : <DataState source="공격 실험" state={attack} />)}
-      {menu === 'defense' && (defense.data ? <DefenseAnalysis data={defense.data} /> : <DataState source="방어 실험" state={defense} />)}
-      {menu === 'experiments' && <><ExperimentRecords defense={defense.data} hc={hc.data} />{!defense.data && <DataState source="방어 산출물" state={defense}/>} {!hc.data && <DataState source="HC160 출처" state={hc}/>}</>}
+      </div>
+      <div className="admin-page" data-menu="authentication" hidden={menu !== 'authentication'}>{visited.has('authentication') && <>{runtimeResult && <RuntimeResultPanel result={runtimeResult} />}{hc.data ? <AuthenticationResults data={hc.data} /> : <><Panel title="실제 인증 기록"><p>인증 기록 연결을 기다리고 있습니다.</p></Panel><DataState source="HC160 분석 세션" state={hc} /></>}</>}
+      </div>
+      <div className="admin-page" data-menu="attack" hidden={menu !== 'attack'}>{visited.has('attack') && (attack.data ? <AttackDashboard data={attack.data} /> : <DataState source="공격 실험" state={attack} />)}
+      </div>
+      <div className="admin-page" data-menu="defense" hidden={menu !== 'defense'}>{visited.has('defense') && (defense.data ? <DefenseAnalysis data={defense.data} /> : <DataState source="방어 실험" state={defense} />)}
+      </div>
+      <div className="admin-page" data-menu="experiments" hidden={menu !== 'experiments'}>{visited.has('experiments') && <><ExperimentRecords defense={defense.data} hc={hc.data} />{!defense.data && <DataState source="방어 산출물" state={defense}/>} {!hc.data && <DataState source="HC160 출처" state={hc}/>}</>}
+      </div>
       <footer className="admin-footer">VeriFace · Security Console <span>한이음</span></footer>
     </main>
   </div>;

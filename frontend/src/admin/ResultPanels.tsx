@@ -1,3 +1,4 @@
+import { Disclosure } from './Interactions';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { loadDefenseDashboardData, loadHc160DashboardData } from '../data';
@@ -21,7 +22,7 @@ export function GateResults({ gates }: { gates: HcGateResult[] }) {
     <div className="vf-gate-list">{gates.map(gate => <article className="vf-gate-card" key={gate.gate_id}>
       <div className="vf-section-heading"><div><small>{gateLayer(gate)}</small><h3>{gate.gate_id}</h3><p>{gate.label}</p></div><span className="vf-pill">{gateStatusLabel(gate.status)}</span></div>
       <Fields value={{ role: gate.role, score: gate.score, threshold: gate.threshold, latency_ms: gate.latency_ms, reason_code: gate.reason_code }} />
-      <details><summary>provenance · 실행 artifact / 모델 / 정책</summary><Fields value={gate.provenance} /></details>
+      <Disclosure title="provenance · 실행 artifact / 모델 / 정책"><Fields value={gate.provenance} /></Disclosure>
     </article>)}</div>
   </Panel>;
 }
@@ -30,8 +31,8 @@ function StaticSessionDetail({ result }: { result: HcSessionResult }) {
     <Fields value={{ status: result.status, final_decision: result.final_decision, schema_version: result.schema_version, created_at: result.created_at, completed_at: result.completed_at, latency_ms: result.latency_ms, attempt_count: result.attempt_count }} />
     <h3>질의 예산</h3><Fields value={result.query_budget} />
     {result.final_decision === 'STEP_UP' && <p className="admin-notice">추가 인증 필요 · 기록된 잔여 질의 예산: {Math.max(0, result.query_budget.limit - result.query_budget.used)}. </p>}
-    <details><summary>판정 출처·감사 정보</summary><Fields value={result.decision_provenance} />{result.audit && <Fields value={result.audit} />}</details>
-    <details><summary>결과 출처·인증 범위</summary><p>HC160 fixture 결과입니다. 토큰 소비 상태는 미제공이며 실제 계정 인증이나 권한 부여를 의미하지 않습니다.</p></details>
+    <Disclosure title="판정 출처·감사 정보"><Fields value={result.decision_provenance} />{result.audit && <Fields value={result.audit} />}</Disclosure>
+    <Disclosure title="결과 출처·인증 범위"><p>HC160 fixture 결과입니다. 토큰 소비 상태는 미제공이며 실제 계정 인증이나 권한 부여를 의미하지 않습니다.</p></Disclosure>
   </Panel><GateResults gates={result.gates} /></>;
 }
 /** Explicit runtime input only. Never converted to or loaded through the static fixture contract. */
@@ -82,7 +83,7 @@ export function DefenseAnalysis({ data }: { data: DefenseData }) {
   </>;
 }
 export function ExperimentRecords({ defense, hc }: { defense?: DefenseData; hc?: HcData }) {
-  return <><Panel title="데이터 출처" eyebrow="RESEARCH ARTIFACTS"><div className="vf-source-list"><article><h3>forensics / CSV·JSON</h3><p>공격 실험, 위험 세션, 탐지 룰. 실험 계정과 타임스탬프입니다.</p></article><article><h3>defense / CSV·JSON</h3><p>앙상블·적대적 학습·특징 압축의 독립 실험 결과와 학습 기록.</p></article><article><h3>hc160 / JSON fixture</h3><p>세션·게이트·시스템 상태 시연. API를 통해 읽어도 정적 자료입니다.</p></article></div><details><summary>데이터 연결·검증 범위</summary><p>실시간 인증 이력 API는 미연결입니다. 모의 로그인은 실제 관리자 권한 통제가 아닙니다. 실제 FULL 정상 승인 및 공격 방어 성능 검증은 완료되지 않았습니다. 시간적 일관성의 방어 실험 결과는 제공되지 않습니다.</p></details></Panel>
+  return <><Panel title="데이터 출처" eyebrow="RESEARCH ARTIFACTS"><div className="vf-source-list"><article><h3>forensics / CSV·JSON</h3><p>공격 실험, 위험 세션, 탐지 룰. 실험 계정과 타임스탬프입니다.</p></article><article><h3>defense / CSV·JSON</h3><p>앙상블·적대적 학습·특징 압축의 독립 실험 결과와 학습 기록.</p></article><article><h3>hc160 / JSON fixture</h3><p>세션·게이트·시스템 상태 시연. API를 통해 읽어도 정적 자료입니다.</p></article></div><Disclosure title="데이터 연결·검증 범위"><p>실시간 인증 이력 API는 미연결입니다. 모의 로그인은 실제 관리자 권한 통제가 아닙니다. 실제 FULL 정상 승인 및 공격 방어 성능 검증은 완료되지 않았습니다. 시간적 일관성의 방어 실험 결과는 제공되지 않습니다.</p></Disclosure></Panel>
     {hc && <><Panel title="정적 fixture의 스키마·출처"><Fields value={{ schema_version: hc.sessionResult.schema_version, ...hc.sessionResult.decision_provenance }} /><p>schema_version은 응답 형식입니다. 각 게이트의 artifact_version은 별도의 실행/산출물 버전입니다.</p><DatasetTable rows={hc.sessionResult.gates.map(gate => ({ gate_id: gate.gate_id, ...gate.provenance }))} label="게이트 산출물 버전" /></Panel><Panel title="기록된 시스템 상태" eyebrow="system-status.json · STATIC FIXTURE"><p className="vf-muted">현재 서버 상태·실시간 지연 측정이 아닙니다. null은 미측정 값입니다.</p><DatasetTable rows={hc.systemStatus} label="정적 시스템 상태" /></Panel></>}
     {defense && <Panel title="공격 전달 산출물·모델" eyebrow="attack_handoff_jpeg_index.csv"><p className="vf-muted">제공된 model / pretrained / 공격 조건 / 산출물 경로를 그대로 표시합니다.</p><DatasetTable rows={defense.handoff} label="실험 전달 산출물" /></Panel>}
   </>;

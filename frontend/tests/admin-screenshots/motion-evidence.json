@@ -1,0 +1,160 @@
+{
+  "viewports": [
+    1440,
+    1280,
+    390,
+    360
+  ],
+  "cards": [
+    {
+      "name": "vf-admin-enter",
+      "card": true,
+      "at": 322.7000000011176,
+      "duration": "0.24s",
+      "delay": "0s"
+    },
+    {
+      "name": "vf-admin-enter",
+      "card": true,
+      "at": 356.30000000074506,
+      "duration": "0.24s",
+      "delay": "0.045s"
+    },
+    {
+      "name": "vf-admin-enter",
+      "card": true,
+      "at": 405.7000000011176,
+      "duration": "0.24s",
+      "delay": "0.09s"
+    }
+  ],
+  "requests": [
+    [
+      "/api/dashboard/static/forensics/dashboard_overview.json",
+      3
+    ],
+    [
+      "/api/dashboard/static/forensics/attack_family_matrix.csv",
+      3
+    ],
+    [
+      "/api/dashboard/static/forensics/top_risk_sessions.csv",
+      3
+    ],
+    [
+      "/api/dashboard/static/forensics/attack_sessions.csv",
+      3
+    ],
+    [
+      "/api/dashboard/static/forensics/rule_hit_summary.csv",
+      3
+    ],
+    [
+      "/api/dashboard/static/forensics/attack_detection_rules.json",
+      3
+    ],
+    [
+      "/api/dashboard/static/defense/verification_defense_feature_squeezing.csv",
+      1
+    ],
+    [
+      "/api/dashboard/static/defense/verification_defense_ensemble.csv",
+      1
+    ],
+    [
+      "/api/dashboard/static/defense/verification_defense_adv_training.csv",
+      1
+    ],
+    [
+      "/api/dashboard/static/defense/attack_handoff_jpeg_index.csv",
+      1
+    ],
+    [
+      "/api/dashboard/static/defense/training_history.json",
+      1
+    ],
+    [
+      "/api/dashboard/hc160/session-result",
+      1
+    ],
+    [
+      "/api/dashboard/hc160/session-summaries",
+      1
+    ],
+    [
+      "/api/dashboard/hc160/system-status",
+      1
+    ],
+    [
+      "/forensics/dashboard_overview.json",
+      3
+    ],
+    [
+      "/forensics/attack_family_matrix.csv",
+      3
+    ],
+    [
+      "/forensics/top_risk_sessions.csv",
+      3
+    ],
+    [
+      "/forensics/rule_hit_summary.csv",
+      3
+    ],
+    [
+      "/forensics/attack_detection_rules.json",
+      3
+    ],
+    [
+      "/defense/verification_defense_feature_squeezing.csv",
+      1
+    ],
+    [
+      "/defense/verification_defense_ensemble.csv",
+      1
+    ],
+    [
+      "/defense/verification_defense_adv_training.csv",
+      1
+    ],
+    [
+      "/defense/attack_handoff_jpeg_index.csv",
+      1
+    ],
+    [
+      "/defense/training_history.json",
+      1
+    ],
+    [
+      "/hc160/session-result.json",
+      1
+    ],
+    [
+      "/hc160/session-summaries.json",
+      1
+    ],
+    [
+      "/hc160/system-status.json",
+      1
+    ],
+    [
+      "/forensics/attack_sessions.csv",
+      1
+    ]
+  ],
+  "checks": [
+    "one-time cards",
+    "180ms page / 280ms bars",
+    "original tooltip values",
+    "retained filters/selection/scroll",
+    "hidden focus excluded",
+    "no navigation requests",
+    "refresh retains data on loading/error",
+    "retry spinner",
+    "mobile Escape/focus/inert",
+    "tooltip viewport bounds",
+    "reduced-motion zero animations",
+    "touch tooltip and outside dismissal"
+  ],
+  "capturedFrames": 424
+}

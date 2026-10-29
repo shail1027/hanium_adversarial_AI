@@ -1,3 +1,4 @@
+import { Disclosure, InfoTooltip } from './Interactions';
 import { useMemo, useState } from 'react';
 import type { loadDashboardData } from '../data';
 import type { AttackFamily, AttackFamilyRow, AttackSession, RiskLevel, RiskSession, RuleDefinition, RuleHitSummary } from '../types';
@@ -46,15 +47,6 @@ function formatDateTime(value: string) {
 
 function splitRules(ruleHits: string) {
   return ruleHits.split(';').filter(Boolean);
-}
-
-function InfoTooltip({ text }: { text: string }) {
-  return (
-    <span className="vf-tooltip" tabIndex={0} aria-label={text}>
-      ?
-      <span role="vf-tooltip">{text}</span>
-    </span>
-  );
 }
 
 function RiskDistribution({ row }: { row: AttackFamilyRow }) {
@@ -116,6 +108,7 @@ function AttackFamilyComparison({ rows }: { rows: AttackFamilyRow[] }) {
               <strong>{formatNumber(row.avg_risk_score, 2)}</strong>
             </div>
             <RiskDistribution row={row} />
+            <InfoTooltip label={`${row.attack_family} 수치와 분모 보기`} text={`공격 후 승인 ${ratio(row.accepted_after_attack, row.sessions)} · 표본 ${row.sessions} / 최대 유형 표본 ${maxSessions} · 위험 분포: critical ${row.critical}, high ${row.high}, medium ${row.medium}, low ${row.low} / ${row.critical + row.high + row.medium + row.low}`} />
             <div className="vf-risk-legend compact">
               <span title={riskDescriptions.critical}>Critical {row.critical}</span>
               <span title={riskDescriptions.high}>High {row.high}</span>
@@ -294,7 +287,7 @@ function SessionDetail({
         })}
       </div>
 
-      <details><summary>전체 공격 조건·측정값</summary><dl className="vf-detail-grid">{Object.entries(session).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value === null ? '자료 없음 (null)' : String(value)}</dd></div>)}</dl></details>
+      <Disclosure title="전체 공격 조건·측정값"><dl className="vf-detail-grid">{Object.entries(session).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value === null ? '자료 없음 (null)' : String(value)}</dd></div>)}</dl></Disclosure>
       <div className="vf-evidence-paths">
         <h3>Evidence Paths</h3>
         <code>source: {session.source_file}</code>

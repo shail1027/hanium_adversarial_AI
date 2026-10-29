@@ -109,3 +109,30 @@ PLAYWRIGHT_MODULE=/Users/choihwanseok/.agents/skills/gstack/node_modules/playwri
 ## 남은 통합 범위
 
 공통 App.tsx 연결과 모바일 UI 결합은 최종 통합 담당 작업이다. 실제 인증 이력 API, 계정/관리자 권한 통제, 실제 FULL 인증 성공 및 방어 성능 실측 검증은 이 UI 변경으로 구현되지 않는다. 서버/인증 백엔드/의존성/lock/shared capture는 변경하지 않았다. 원격 push·배포·원본 브랜치 병합 없음.
+
+## 관리자 모션·상호작용 후속 구현
+
+기준 커밋 `1586d7b` 위에서 같은 브랜치로 작업했다. 공통 진입점/사용자 UI/API/서버/의존성 변경은 없다.
+
+- 개요 카드: 실제 데이터 도착 시 240ms 등장, 0/45/90ms stagger로 최대 330ms. 숫자 카운트업 없음. 첫 완료 또는 메뉴 이탈 이후 재생하지 않는다.
+- 메뉴 본문: 180ms opacity/translate 전환. 이전 화면은 즉시 `hidden` 처리하여 클릭·포커스·접근성 트리에서 제외한다. 방문한 화면은 유지하여 필터·선택·펼침·표 스크롤을 보존하며 메뉴별 페이지 스크롤도 복귀한다.
+- 내비게이션: 활성 배경 opacity와 표시선 scale 전환. 모바일은 비모달 펼침 메뉴로 180ms 열기/닫기, 닫히는 즉시 nav inert. Esc는 메뉴 버튼으로 포커스를 돌린다. 포커스 트랩·배경 차단 레이어 없음.
+- 차트: 기존 공격 막대/위험 분포에만 280ms scaleX. 원본 width/숫자/분모는 변경하지 않는다. 수치 툴팁은 원본 행에서 계산하고 애니메이션 중간 값에 의존하지 않는다.
+- 툴팁: native popover top layer, 화면 경계 안으로 위치 조정. hover/focus/click으로 열고 Esc/바깥 클릭으로 닫는다. 포인터를 툴팁으로 옮기거나 내용 내부를 스크롤할 수 있다. 120ms 닫기 유예 타이머는 이벤트 발생 시만 사용하고 unmount 때 정리한다. resize/scroll 리스너는 열린 동안만 등록한다.
+- 상세: 공용 `Disclosure`의 버튼/aria-expanded/aria-controls와 grid 0fr→1fr 전환. 고정 max-height로 긴 내용을 자르지 않는다. 닫히는 순간 내용은 inert/aria-hidden이 된다.
+- 표: 선택 행의 표시선·배경, hover/focus-within, 필터/버튼 눌림 피드백. 행별 등장 애니메이션 없음.
+- 실제 로딩: 카드/자료 영역 스켈레톤과 요청 중 버튼 스피너. 개요 skeleton/완료 카드 높이 일치. 새로고침은 현재 메뉴의 관련 자료만 재요청하고 유효한 기존 결과·선택 상태를 유지한다. 실패 시 기존 결과 옆에 재시도 표시. 요청 완료를 연출 때문에 지연하지 않는다.
+- `prefers-reduced-motion: reduce`: 이동·차트·스피너·transition 모두 제거. 상태·선택·펼침 기능은 유지한다.
+- StrictMode effect 재실행은 컴포넌트 내부의 진행 중 Promise를 공유한다. 메뉴 전환/필터/모션은 로더 의존성에 포함되지 않는다. polling이나 상시 requestAnimationFrame 없음.
+
+브라우저 검사 실행 명령은 위와 같다. `admin-browser.mjs`가 먼저 `admin-motion-checks.mjs`를 호출한다. 검사는 실제 animationstart 이벤트와 CSS duration/delay를 수집하고, 실제 요청을 보류/실패시켜 로딩·갱신·재시도를 검사한다. 정적 캡처만으로 모션 성공을 판단하지 않는다.
+
+추가 자료:
+
+- `frontend/tests/admin-screenshots/admin-motion.webm`: 실제 Chrome CDP 화면 프레임을 캡처한 동작 영상. Chromium 내장 MediaRecorder로 인코딩하며 새 패키지/ffmpeg 의존성은 추가하지 않는다. 긴 대기 간격은 최대 350ms로 줄이므로 정밀한 모션 시간 증거는 아래 이벤트 기록을 사용한다.
+- `frontend/tests/admin-screenshots/motion-evidence.json`: 카드 애니메이션 이벤트·duration/delay·요청 횟수·검증 항목.
+- `frontend/tests/admin-screenshots/motion-reduced-mobile.png`: 움직임 줄이기 모드의 모바일 화면.
+
+검증 범위는 UI와 전송 상태 유지이며 실제 얼굴 인증 성공/성능 검증으로 해석하지 않는다. data.ts/types.ts/api.ts/faceCapture.ts의 데이터·인증·토큰 계약은 그대로다.
+
+후속 검증 결과: Node 13/13, TypeScript/build, ESLint, 관리자 export 별도 esbuild, git diff 공백 검사 통과. 브라우저 전체 회귀 및 추가 모션 검사가 모두 통과했다. 실제 touch 컨텍스트에서 툴팁 열기/바깥 탭 닫기도 확인했다. 애니메이션 프레임의 전달 시각은 녹화 부하에 영향을 받을 수 있으므로 animationstart 시점의 실제 CSS duration/delay(240ms + 최대 90ms)를 함께 기록했다. 정적 스크린샷은 애니메이션 완료 상태를 캡처한다. 테스트 종료 시 임시 HTML/TSX와 자신이 띄운 서버를 정리했다.
